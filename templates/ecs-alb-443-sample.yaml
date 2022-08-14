@@ -1,0 +1,359 @@
+#
+# Amazon Fargateでアプリケーションを動かす
+# 443ポートでALBで公開
+# https://qiita.com/ykdevs/items/db62319de78a503c1f71
+#
+Parameters:
+  AlbPort:
+    Type: Number
+    Description: ALB Global Port
+    Default: 443
+  ContainerPort:
+    Type: Number
+    Description: Container Local Port
+    Default: 8080
+  EcrImageName:
+    Type: String
+    Description: ECR Image Name
+    Default: ykdevs-sample/spring-sample
+  SslCertificateId:
+    Type: String
+    Description: SSL Certificate ARN
+    Default: 2b472245-b414-440d-8201-d3e5680ecd41
+Resources:
+  # Make VPC
+  EcsAlb443SampleVPC:
+    Type: 'AWS::EC2::VPC'
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      InstanceTenancy: default
+      Tags:
+        - Key: Name
+          Value: EcsAlb443Sample
+  # Make InternetGateway
+  EcsAlb443SampleInternetGW:
+    Type: 'AWS::EC2::InternetGateway'
+    Properties:
+      Tags:
+        - Key: Name
+          Value: EcsAlb443Sample
+  # Make VPCGatewayAttachment
+  EcsAlb443SampleVPCGW514A8E2A:
+    Type: 'AWS::EC2::VPCGatewayAttachment'
+    Properties:
+      VpcId: !Ref EcsAlb443SampleVPC
+      InternetGatewayId: !Ref EcsAlb443SampleInternetGW
+
+  # Make PublicSubnet
+  EcsAlb443SampleSubnet1Subnet:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      CidrBlock: 10.0.0.0/24
+      VpcId: !Ref EcsAlb443SampleVPC
+      AvailabilityZone: !Select
+        - 0
+        - !GetAZs ''
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: >-
+            EcsAlb443Sample/PublicSubnet1
+  # Make RouteTable
+  EcsAlb443SampleSubnet1RouteTable:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref EcsAlb443SampleVPC
+      Tags:
+        - Key: Name
+          Value: >-
+            EcsAlb443Sample/PublicSubnet1
+  # Make RouteTableAssociation
+  EcsAlb443SampleRouteSubnet1TableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      RouteTableId: !Ref EcsAlb443SampleSubnet1RouteTable
+      SubnetId: !Ref EcsAlb443SampleSubnet1Subnet
+  # Make Route
+  EcsAlb443SampleSubnet1DefaultRoute:
+    Type: 'AWS::EC2::Route'
+    Properties:
+      RouteTableId: !Ref EcsAlb443SampleSubnet1RouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref EcsAlb443SampleInternetGW
+    DependsOn:
+      - EcsAlb443SampleInternetGW
+
+  # Make PublicSubnet
+  EcsAlb443SampleSubnet2Subnet:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      CidrBlock: 10.0.1.0/24
+      VpcId: !Ref EcsAlb443SampleVPC
+      AvailabilityZone: !Select
+        - 1
+        - !GetAZs ''
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: >-
+            EcsAlb443Sample/PublicSubnet2
+  # Make RouteTable
+  EcsAlb443SampleSubnet2RouteTable:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref EcsAlb443SampleVPC
+      Tags:
+        - Key: Name
+          Value: >-
+            EcsAlb443Sample/PublicSubnet2
+  # Make RouteTableAssociation
+  EcsAlb443SampleSubnet2RouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      RouteTableId: !Ref EcsAlb443SampleSubnet2RouteTable
+      SubnetId: !Ref EcsAlb443SampleSubnet2Subnet
+  # Make Route
+  EcsAlb443SampleSubnet2DefaultRoute:
+    Type: 'AWS::EC2::Route'
+    Properties:
+      RouteTableId: !Ref EcsAlb443SampleSubnet2RouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref EcsAlb443SampleInternetGW
+    DependsOn:
+      - EcsAlb443SampleInternetGW
+
+  # Make SecurityGroup
+  EcsAlb443SampleSecurityGroupForEcs:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupName: EcsAlb443Sample/SecurityGroupForEcs
+      GroupDescription: >-
+        SecurityGroup For ECS
+      SecurityGroupEgress:
+        - CidrIp: 0.0.0.0/0
+          Description: Allow all outbound traffic by default
+          IpProtocol: '-1'
+      VpcId: !Ref EcsAlb443SampleVPC
+      Tags:
+        - Key: Name
+          Value: EcsAlb443Sample/SecurityGroupForEcs
+  # Make SecurityGroupIngress
+  EcsAlb443SampleSecurityGroupIngressForEcs:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      IpProtocol: tcp
+      Description: Load balancer to target
+      GroupId: !GetAtt
+        - EcsAlb443SampleSecurityGroupForEcs
+        - GroupId
+      SourceSecurityGroupId: !GetAtt
+        - EcsAlb443SampleSecurityGroupForAlb
+        - GroupId
+      FromPort: !Ref ContainerPort
+      ToPort: !Ref ContainerPort
+  # Make SecurityGroup
+  EcsAlb443SampleSecurityGroupForAlb:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupName: EcsAlb443Sample/SecurityGroupForAlb
+      GroupDescription: >-
+        SecurityGroup For ALB
+      SecurityGroupIngress:
+        - CidrIp: 0.0.0.0/0
+          Description: !Join [' ', ['Allow from anyone on port', !Ref AlbPort]]
+          IpProtocol: tcp
+          FromPort: !Ref AlbPort
+          ToPort: !Ref AlbPort
+      VpcId: !Ref EcsAlb443SampleVPC
+      Tags:
+        - Key: Name
+          Value: EcsAlb443Sample/SecurityGroupForAlb
+  # Make SecurityGroupEgress
+  EcsAlb443SampleSecurityGroupEgressForAlb:
+    Type: 'AWS::EC2::SecurityGroupEgress'
+    Properties:
+      GroupId: !GetAtt
+        - EcsAlb443SampleSecurityGroupForAlb
+        - GroupId
+      IpProtocol: tcp
+      Description: Load balancer to target
+      DestinationSecurityGroupId: !GetAtt
+        - EcsAlb443SampleSecurityGroupForEcs
+        - GroupId
+      FromPort: !Ref ContainerPort
+      ToPort: !Ref ContainerPort
+
+  # Make Internet Facing LoadBalancer
+  EcsAlb443SampleLoadBalancer:
+    Type: 'AWS::ElasticLoadBalancingV2::LoadBalancer'
+    Properties:
+      LoadBalancerAttributes:
+        - Key: deletion_protection.enabled
+          Value: 'false'
+      Scheme: internet-facing
+      SecurityGroups:
+        - !GetAtt
+          - EcsAlb443SampleSecurityGroupForAlb
+          - GroupId
+      Subnets:
+        - !Ref EcsAlb443SampleSubnet1Subnet
+        - !Ref EcsAlb443SampleSubnet2Subnet
+      Type: application
+  # Make Listener
+  EcsAlb443SampleAlbListener:
+    Type: 'AWS::ElasticLoadBalancingV2::Listener'
+    Properties:
+      DefaultActions:
+        - TargetGroupArn: !Ref EcsAlb443SampleAlbTargetGroup
+          Type: forward
+      LoadBalancerArn: !Ref EcsAlb443SampleLoadBalancer
+      Port: !Ref AlbPort
+      Protocol: HTTPS
+      Certificates:
+        -  CertificateArn: !Join [ '', ['arn:aws:acm:', !Ref AWS::Region, ':', !Ref AWS::AccountId, ':certificate/', !Ref SslCertificateId]]
+  # Make TargetGroup
+  EcsAlb443SampleAlbTargetGroup:
+    Type: 'AWS::ElasticLoadBalancingV2::TargetGroup'
+    Properties:
+      Port: !Ref ContainerPort
+      Protocol: HTTP
+      TargetType: ip
+      VpcId: !Ref EcsAlb443SampleVPC
+
+  # Make LogGroup
+  EcsAlb443SampleServiceTaskDefLogGroup:
+    Type: 'AWS::Logs::LogGroup'
+    UpdateReplacePolicy: Retain
+    DeletionPolicy: Delete
+  # Make IAM Role
+  EcsAlb443SampleServiceTaskExecutionRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: 'sts:AssumeRole'
+            Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+        Version: 2012-10-17
+  # Make IAM Policy
+  EcsAlb443SampleServiceTaskDefExecutionRoleDefaultPolicy:
+    Type: 'AWS::IAM::Policy'
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Action:
+              - 'logs:CreateLogStream'
+              - 'logs:PutLogEvents'
+            Effect: Allow
+            Resource: !GetAtt
+              - EcsAlb443SampleServiceTaskDefLogGroup
+              - Arn
+          - Action:
+              - 'ecr:BatchGetImage'
+              - 'ecr:GetAuthorizationToken'
+              - 'ecr:GetDownloadUrlForLayer'
+              - 'ecr:DescribeRepositories'
+              - 'ecr:DescribeImage'
+            Resource: "*"
+            Effect: Allow
+        Version: 2012-10-17
+      PolicyName: >-
+        EcsAlb443SampleServiceTaskDefExecutionRoleDefaultPolicy
+      Roles:
+        - !Ref EcsAlb443SampleServiceTaskExecutionRole
+
+  # Make Cluster
+  EcsAlb443SampleCluster:
+    Type: 'AWS::ECS::Cluster'
+    Properties:
+      ClusterName: EcsAlb443SampleCluster
+  # Make IAM::Role
+  EcsAlb443SampleServiceTaskDefTaskRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: 'sts:AssumeRole'
+            Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+        Version: 2012-10-17
+  # Make TaskDefinition
+  EcsAlb443SampleServiceTaskDef:
+    Type: 'AWS::ECS::TaskDefinition'
+    Properties:
+      ContainerDefinitions:
+        - Essential: true
+          Image: !Join ['', [!Ref AWS::AccountId, '.dkr.ecr.', !Ref AWS::Region, '.amazonaws.com/', !Ref EcrImageName]]
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref EcsAlb443SampleServiceTaskDefLogGroup
+              awslogs-stream-prefix: ecs
+              awslogs-region: !Ref 'AWS::Region'
+          Name: web
+          PortMappings:
+            - ContainerPort: !Ref ContainerPort
+              Protocol: tcp
+      Cpu: '512'
+      ExecutionRoleArn: !GetAtt
+        - EcsAlb443SampleServiceTaskExecutionRole
+        - Arn
+      Family: >-
+        EcsAlb443SampleServiceTaskDef
+      Memory: '2048'
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      TaskRoleArn: !GetAtt
+        - EcsAlb443SampleServiceTaskDefTaskRole
+        - Arn
+  # Make Service
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ecs-service.html
+  EcsAlb443SampleService:
+    Type: 'AWS::ECS::Service'
+    Properties:
+      Cluster: !Ref EcsAlb443SampleCluster
+      DeploymentConfiguration:
+        MaximumPercent: 200
+        MinimumHealthyPercent: 50
+      DesiredCount: 1
+      EnableECSManagedTags: false
+      HealthCheckGracePeriodSeconds: 60
+      LaunchType: FARGATE
+      LoadBalancers:
+        - ContainerName: web
+          ContainerPort: !Ref ContainerPort
+          TargetGroupArn: !Ref EcsAlb443SampleAlbTargetGroup
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: ENABLED
+          SecurityGroups:
+            - !GetAtt
+              - EcsAlb443SampleSecurityGroupForEcs
+              - GroupId
+          Subnets:
+            - !Ref EcsAlb443SampleSubnet1Subnet
+            - !Ref EcsAlb443SampleSubnet2Subnet
+      TaskDefinition: !Ref EcsAlb443SampleServiceTaskDef
+    DependsOn:
+      - EcsAlb443SampleAlbTargetGroup
+      - EcsAlb443SampleAlbListener
+
+# Outputs
+# https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/outputs-section-structure.html
+Outputs:
+  EcsAlb443SampleLoadBalancerDNS:
+    Value: !GetAtt
+      - EcsAlb443SampleLoadBalancer
+      - DNSName
+  EcsAlb443SampleLoadBalancerURL:
+    Value: !Join
+      - ''
+      - - 'http://'
+        - !GetAtt
+          - EcsAlb443SampleLoadBalancer
+          - DNSName

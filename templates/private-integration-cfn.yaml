@@ -156,7 +156,7 @@ Resources:
         - Key: Name
           Value: >-
             PrivateIntegrationsStack/PrivateIntegrationsTutorialVPC/PublicSubnet2
-  # Make PublicSubnet1
+  # Make PrivateSubnet1
   # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-subnet.html
   PrivateIntegrationsTutorialVPCPrivateSubnet1SubnetE5CDA06F:
     Type: 'AWS::EC2::Subnet'
