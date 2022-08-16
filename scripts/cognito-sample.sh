@@ -1,4 +1,17 @@
 #! /bin/bash
+# Make AWS Cognito UserPool & IdPool
+#
+#  ./cognito-sample.sh -a [describe|create|delete] [-u UserPoolName] [-c ClientName] [-i IdPoolName]
+#
+#  -a action
+#      describe : Describe UserPool & IdPool
+#      create   : Create UserPool & IdPool
+#      delete   : Delete UserPool & IdPool
+#
+#  -u UserPoolName : Default UserPoolSample
+#  -c ClientName   : Default AppClientSample
+#  -i IdPoolName   : Default IdPoolSample
+#
 # https://qiita.com/fkooo/items/660cab0090a80861155b
 # https://docs.aws.amazon.com/cli/latest/reference/cognito-idp/index.html#cli-aws-cognito-idp
 
@@ -27,20 +40,20 @@ usage() {
 getUserPoolId() {
   USER_POOL_NAME=$1
   echo $(aws cognito-idp list-user-pools --max-results 20 \
-   | jq -r '.UserPools|map(select(.Name=="'${USER_POOL_NAME}'"))|.[0].Id')
+   | jq -r '.UserPools[]|select(.Name=="'${USER_POOL_NAME}'")|.Id')
 }
 
 getClientId() {
   USER_POOL_NAME=$1
   CLIENT_NAME=$2
   echo $(aws cognito-idp list-user-pool-clients --user-pool-id ${USER_POOL_ID} \
-   | jq -r '.UserPoolClients|map(select(.ClientName=="'${CLIENT_NAME}'"))|.[0].ClientId')
+   | jq -r '.UserPoolClients[]|select(.ClientName=="'${CLIENT_NAME}'")|.ClientId')
 }
 
 getIdPoolId() {
   ID_POOL_NAME=$1
   echo $(aws cognito-identity list-identity-pools --max-results 20 \
-   | jq -r '.IdentityPools|map(select(.IdentityPoolName=="'${ID_POOL_NAME}'"))|.[0].IdentityPoolId')
+   | jq -r '.IdentityPools[]|select(.IdentityPoolName=="'${ID_POOL_NAME}'")|.IdentityPoolId')
 }
 
 
@@ -89,6 +102,7 @@ create() {
   --username-attributes email \
   --username-configuration 'CaseSensitive=false' \
   --account-recovery-setting 'RecoveryMechanisms=[{Priority=1,Name=verified_email},{Priority=2,Name=verified_phone_number}]' \
+  --schema 'Name=role,AttributeDataType=String,DeveloperOnlyAttribute=false,Mutable=true,Required=false,StringAttributeConstraints={MinLength=1,MaxLength=256}'
 
   # Get UserPoolId
   USER_POOL_ID=$(getUserPoolId "${USER_POOL_NAME}")
@@ -99,10 +113,10 @@ create() {
   --access-token-validity  60 \
   --id-token-validity 60 \
   --token-validity-units 'AccessToken=minutes,IdToken=minutes,RefreshToken=days' \
-  --read-attributes "address" "birthdate" "email" "email_verified" "family_name" "gender" "given_name" "locale" \
-  "middle_name" "name" "nickname" "phone_number" "phone_number_verified" "picture" "preferred_username" "profile" \
-  "updated_at" "website" "zoneinfo" \
-  --write-attributes "address" "birthdate" "email" "family_name" "gender" "given_name" "locale" "middle_name" \
+  --read-attributes "address" "birthdate" "custom:role" "email" "email_verified" "family_name" "gender" "given_name" \
+  "locale" "middle_name" "name" "nickname" "phone_number" "phone_number_verified" "picture" "preferred_username" \
+  "profile" "updated_at" "website" "zoneinfo" \
+  --write-attributes "address" "birthdate" "custom:role" "email" "family_name" "gender" "given_name" "locale" "middle_name" \
   "name" "nickname" "phone_number" "picture" "preferred_username" "profile" "updated_at" "website" "zoneinfo" \
   --explicit-auth-flows "ALLOW_REFRESH_TOKEN_AUTH" "ALLOW_USER_SRP_AUTH" \
   --prevent-user-existence-errors ENABLED
