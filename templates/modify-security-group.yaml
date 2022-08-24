@@ -1,0 +1,30 @@
+#
+# セキュリティグループにルールを追加する
+#
+Parameters:
+  #セキュリティグループを作成するVPC
+  SecurityGroupId:
+    Description: SelectVPC
+    Type: AWS::EC2::SecurityGroup::Id
+
+  #インバウンドに追加するポート番号
+  AdditionalPort:
+    Type: Number
+    Default: 443
+
+Conditions:
+  IsInputAdditionalPort: !Not [!Equals [!Ref AdditionalPort, '']]
+
+Resources:
+  # Modify SecurityGroup
+  ModifySecurityGroup:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId: !Ref SecurityGroupId
+      CidrIp: 0.0.0.0/0
+      Description: !Sub
+        - "Allow from anyone on port ${Port}"
+        - "Port": !Ref AdditionalPort
+      FromPort: !Ref AdditionalPort
+      IpProtocol: tcp
+      ToPort: !Ref AdditionalPort

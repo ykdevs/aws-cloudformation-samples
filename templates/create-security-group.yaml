@@ -1,0 +1,33 @@
+Resources:
+  # Make VPC
+  CreateSecurityGroupVPC:
+    Type: 'AWS::EC2::VPC'
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      InstanceTenancy: default
+      Tags:
+        - Key: Name
+          Value: CreateSecurityGroup
+
+  # Make SecurityGroup
+  CreateSecurityGroupSecurityGroup1:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupName: CreateSecurityGroup/SecurityGroup1
+      GroupDescription: >-
+        Sample SecurityGroup
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+      SecurityGroupEgress:
+        - CidrIp: 0.0.0.0/0
+          Description: Allow all outbound traffic by default
+          IpProtocol: '-1'
+      VpcId: !Ref CreateSecurityGroupVPC
+      Tags:
+        - Key: Name
+          Value: CreateSecurityGroupVPC/SecurityGroup1

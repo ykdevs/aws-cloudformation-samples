@@ -74,7 +74,7 @@ Resources:
         - Key: Name
           Value: >-
             PrivateIntegrationsStack/PrivateIntegrationsTutorialVPC/PublicSubnet1
-  # Make NetGateway
+  # Make NatGateway
   # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-natgateway.html
   PrivateIntegrationsTutorialVPCPublicSubnet1NATGatewayC5702CC8:
     Type: 'AWS::EC2::NatGateway'
