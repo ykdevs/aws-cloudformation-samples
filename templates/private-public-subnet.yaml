@@ -1,0 +1,330 @@
+#
+# 以下のSubnetをもつVPC構築
+# PublicSubnet1,2
+# PrivateSubnet1,2
+#
+Parameters:
+  VpcCidrBlock:
+    Type: String
+    Description: VPC's CidrBlock
+    Default: 10.0.0.0/16
+  PrivateSubnet1CidrBlock:
+    Type: String
+    Description: Private Subnet1's CidrBlock
+    Default: 10.0.0.0/24
+  PrivateSubnet2CidrBlock:
+    Type: String
+    Description: Private Subnet2's CidrBlock
+    Default: 10.0.1.0/24
+  PublicSubnet1CidrBlock:
+    Type: String
+    Description: Public Subnet1's CidrBlock
+    Default: 10.0.128.0/18
+  PublicSubnet2CidrBlock:
+    Type: String
+    Description: Public Subnet2's CidrBlock
+    Default: 10.0.192.0/18
+
+Resources:
+  # Make VPC
+  PublicPrivateSubnetVPC:
+    Type: 'AWS::EC2::VPC'
+    Properties:
+      CidrBlock: !Ref VpcCidrBlock
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      InstanceTenancy: default
+      Tags:
+        - Key: Name
+          Value: !Ref AWS::StackName
+
+  # Make InternetGateway
+  PublicPrivateSubnetInternetGW:
+    Type: 'AWS::EC2::InternetGateway'
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Ref AWS::StackName
+  # Make VPCGatewayAttachment
+  PublicPrivateSubnetVPCGW:
+    Type: 'AWS::EC2::VPCGatewayAttachment'
+    Properties:
+      VpcId: !Ref PublicPrivateSubnetVPC
+      InternetGatewayId: !Ref PublicPrivateSubnetInternetGW
+    DependsOn:
+      - PublicPrivateSubnetVPC
+      - PublicPrivateSubnetInternetGW
+
+  # Make PublicSubnet1
+  PublicPrivateSubnetPublicSubnet1Subnet:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      CidrBlock: !Ref PrivateSubnet1CidrBlock
+      VpcId: !Ref PublicPrivateSubnetVPC
+      AvailabilityZone: !Select
+        - 0
+        - !GetAZs ''
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - "${StackName}-PublicSubnet1"
+            - "StackName": !Ref AWS::StackName
+    DependsOn:
+      - PublicPrivateSubnetVPC
+  # Make RouteTable
+  PublicPrivateSubnetPublicSubnet1RouteTable:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref PublicPrivateSubnetVPC
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - "${StackName}-PublicSubnet1"
+            - "StackName": !Ref AWS::StackName
+    DependsOn:
+      - PublicPrivateSubnetVPC
+  # Make RouteTableAssociation
+  PublicPrivateSubnetRouteSubnet1TableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      RouteTableId: !Ref PublicPrivateSubnetPublicSubnet1RouteTable
+      SubnetId: !Ref PublicPrivateSubnetPublicSubnet1Subnet
+    DependsOn:
+      - PublicPrivateSubnetPublicSubnet1Subnet
+      - PublicPrivateSubnetPublicSubnet1RouteTable
+  # Make Route
+  PublicPrivateSubnetPublicSubnet1DefaultRoute:
+    Type: 'AWS::EC2::Route'
+    Properties:
+      RouteTableId: !Ref PublicPrivateSubnetPublicSubnet1RouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref PublicPrivateSubnetInternetGW
+    DependsOn:
+      - PublicPrivateSubnetPublicSubnet1RouteTable
+      - PublicPrivateSubnetInternetGW
+
+  # Make PublicSubnet2
+  PublicPrivateSubnetPublicSubnet2Subnet:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      CidrBlock: !Ref PrivateSubnet2CidrBlock
+      VpcId: !Ref PublicPrivateSubnetVPC
+      AvailabilityZone: !Select
+        - 1
+        - !GetAZs ''
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - "${StackName}-PublicSubnet2"
+            - "StackName": !Ref AWS::StackName
+    DependsOn:
+      - PublicPrivateSubnetVPC
+  # Make RouteTable
+  PublicPrivateSubnetPublicSubnet2RouteTable:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref PublicPrivateSubnetVPC
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - "${StackName}-PublicSubnet2"
+            - "StackName": !Ref AWS::StackName
+    DependsOn:
+      - PublicPrivateSubnetVPC
+  # Make RouteTableAssociation
+  PublicPrivateSubnetPublicSubnet2RouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      RouteTableId: !Ref PublicPrivateSubnetPublicSubnet2RouteTable
+      SubnetId: !Ref PublicPrivateSubnetPublicSubnet2Subnet
+    DependsOn:
+      - PublicPrivateSubnetPublicSubnet2RouteTable
+      - PublicPrivateSubnetPublicSubnet2Subnet
+  # Make Route
+  PublicPrivateSubnetPublicSubnet2DefaultRoute:
+    Type: 'AWS::EC2::Route'
+    Properties:
+      RouteTableId: !Ref PublicPrivateSubnetPublicSubnet2RouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref PublicPrivateSubnetInternetGW
+    DependsOn:
+      - PublicPrivateSubnetPublicSubnet2RouteTable
+      - PublicPrivateSubnetInternetGW
+
+  # Make EIP
+  PublicPrivateSubnetPublicSubnet1Eip:
+    Type: 'AWS::EC2::EIP'
+    Properties:
+      Domain: vpc
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - "${StackName}-PublicSubnet1"
+            - "StackName": !Ref AWS::StackName
+  # Make NatGateway
+  PublicPrivateSubnetNatGateway1:
+    Type: 'AWS::EC2::NatGateway'
+    Properties:
+      AllocationId: !GetAtt
+        - PublicPrivateSubnetPublicSubnet1Eip
+        - AllocationId
+      SubnetId: !Ref PublicPrivateSubnetPublicSubnet1Subnet
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - "${StackName}-PublicSubnet1"
+            - "StackName": !Ref AWS::StackName
+
+  # Make PrivateSubnet1
+  PublicPrivateSubnetPrivateSubnet1Subnet:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      CidrBlock: !Ref PublicSubnet1CidrBlock
+      VpcId: !Ref PublicPrivateSubnetVPC
+      AvailabilityZone: !Select
+        - 0
+        - !GetAZs ''
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - "${StackName}-PrivateSubnet1"
+            - "StackName": !Ref AWS::StackName
+  # Make RouteTable
+  PublicPrivateSubnetPrivateSubnet1RouteTable:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref PublicPrivateSubnetVPC
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - "${StackName}-PrivateSubnet1"
+            - "StackName": !Ref AWS::StackName
+    DependsOn:
+      - PublicPrivateSubnetVPC
+  # Make RouteTableAssociation
+  PublicPrivateSubnetPrivateSubnet1RouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      RouteTableId: !Ref PublicPrivateSubnetPrivateSubnet1RouteTable
+      SubnetId: !Ref PublicPrivateSubnetPrivateSubnet1Subnet
+    DependsOn:
+      - PublicPrivateSubnetPrivateSubnet1RouteTable
+      - PublicPrivateSubnetPrivateSubnet1Subnet
+  # Make Route
+  PublicPrivateSubnetPrivateSubnet1DefaultRoute:
+    Type: 'AWS::EC2::Route'
+    Properties:
+      RouteTableId: !Ref PublicPrivateSubnetPrivateSubnet1RouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref PublicPrivateSubnetNatGateway1
+    DependsOn:
+      - PublicPrivateSubnetPrivateSubnet1RouteTable
+      - PublicPrivateSubnetNatGateway1
+
+  # Make EIP
+  PublicPrivateSubnetPublicSubnet2Eip:
+    Type: 'AWS::EC2::EIP'
+    Properties:
+      Domain: vpc
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - "${StackName}-PublicSubnet2"
+            - "StackName": !Ref AWS::StackName
+  # Make NetGateway
+  PublicPrivateSubnetNatGateway2:
+    Type: 'AWS::EC2::NatGateway'
+    Properties:
+      AllocationId: !GetAtt
+        - PublicPrivateSubnetPublicSubnet2Eip
+        - AllocationId
+      SubnetId: !Ref PublicPrivateSubnetPublicSubnet2Subnet
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - "${StackName}-PublicSubnet2"
+            - "StackName": !Ref AWS::StackName
+
+  # Make PrivateSubnet2
+  PublicPrivateSubnetPrivateSubnet2Subnet:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      CidrBlock: !Ref PublicSubnet2CidrBlock
+      VpcId: !Ref PublicPrivateSubnetVPC
+      AvailabilityZone: !Select
+        - 0
+        - !GetAZs ''
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - "${StackName}-PrivateSubnet2"
+            - "StackName": !Ref AWS::StackName
+  # Make RouteTable
+  PublicPrivateSubnetPrivateSubnet2RouteTable:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref PublicPrivateSubnetVPC
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - "${StackName}-PrivateSubnet2"
+            - "StackName": !Ref AWS::StackName
+    DependsOn:
+      - PublicPrivateSubnetVPC
+  # Make RouteTableAssociation
+  PublicPrivateSubnetPrivateSubnet2RouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      RouteTableId: !Ref PublicPrivateSubnetPrivateSubnet2RouteTable
+      SubnetId: !Ref PublicPrivateSubnetPrivateSubnet2Subnet
+    DependsOn:
+      - PublicPrivateSubnetPrivateSubnet2RouteTable
+      - PublicPrivateSubnetPrivateSubnet2Subnet
+  # Make Route
+  PublicPrivateSubnetPrivateSubnet2DefaultRoute:
+    Type: 'AWS::EC2::Route'
+    Properties:
+      RouteTableId: !Ref PublicPrivateSubnetPrivateSubnet2RouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref PublicPrivateSubnetNatGateway2
+    DependsOn:
+      - PublicPrivateSubnetPrivateSubnet2RouteTable
+      - PublicPrivateSubnetNatGateway2
+
+# Outputs
+Outputs:
+  VpcId:
+    Value: !Ref PublicPrivateSubnetVPC
+    Description: VPC id
+
+  InternetGatewayId:
+    Value: !Ref PublicPrivateSubnetInternetGW
+    Description: Internet Gateway Id
+
+  NatGateway1:
+    Value: !Ref PublicPrivateSubnetNatGateway1
+    Description: Public Subnet1 NatGateway Id
+
+  NatGateway2:
+    Value: !Ref PublicPrivateSubnetNatGateway2
+    Description: Public Subnet2 NatGateway Id
+
+  PublicSubnet1Id:
+    Value: !Ref PublicPrivateSubnetPublicSubnet1Subnet
+    Description: Public Subnet1 id
+
+  PublicSubnet2Id:
+    Value: !Ref PublicPrivateSubnetPublicSubnet2Subnet
+    Description: Public Subnet2 id
+
+  PrivateSubnet1Id:
+    Value: !Ref PublicPrivateSubnetPrivateSubnet1Subnet
+    Description: Private Subnet1 id
+
+  PrivateSubnet2d:
+    Value: !Ref PublicPrivateSubnetPrivateSubnet2Subnet
+    Description: Private Subnet2 id
