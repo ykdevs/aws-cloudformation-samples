@@ -1,0 +1,103 @@
+#
+# チュートリアル: Amazon ECS サービスへのプライベート統合を使用した HTTP API の構築
+#
+# ステップ 1: Amazon ECS サービスを作成する
+# https://docs.aws.amazon.com/ja_jp/apigateway/latest/developerguide/http-api-private-integration.html
+#
+Parameters:
+  NetworkStackName:
+    Type: String
+    Description: Name of private-subnet-for-ecs Stack
+    Default: sample-app-network
+  AlbPort:
+    Type: Number
+    Description: ALB Local Port
+    Default: 80
+  ContainerPort:
+    Type: Number
+    Description: Container Local Port
+    Default: 8080
+  HealthCheckPath:
+    Type: String
+    Description: Target Status Check Path
+    Default: /status
+Resources:
+  # Make SecurityGroup
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-security-group.html
+  SampleSecurityGroupForAlb:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: >-
+        Automatically created Security Group for SampleAlb
+      SecurityGroupIngress:
+        - CidrIp: 0.0.0.0/0
+          Description: !Sub "Allow from anyone on port ${AlbPort}"
+          FromPort: !Ref AlbPort
+          IpProtocol: tcp
+          ToPort: !Ref AlbPort
+      VpcId: !ImportValue
+        'Fn::Sub': '${NetworkStackName}-SampleVPC'
+
+  # Make LoadBalancer
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-elasticloadbalancingv2-loadbalancer.html
+  SampleAlb:
+    Type: 'AWS::ElasticLoadBalancingV2::LoadBalancer'
+    Properties:
+      LoadBalancerAttributes:
+        - Key: deletion_protection.enabled
+          Value: 'false'
+      Scheme: internal
+      SecurityGroups:
+        - !GetAtt SampleSecurityGroupForAlb.GroupId
+      Subnets:
+        - !ImportValue
+          'Fn::Sub': '${NetworkStackName}-SampleVPCPrivateSubnet1Subnet'
+        - !ImportValue
+          'Fn::Sub': '${NetworkStackName}-SampleVPCPrivateSubnet2Subnet'
+      Type: application
+  # Make Listener
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-elasticloadbalancingv2-listener.html
+  SampleAlbListener:
+    Type: 'AWS::ElasticLoadBalancingV2::Listener'
+    Properties:
+      DefaultActions:
+        - TargetGroupArn: !Ref SampleAlbTargetGroup
+          Type: forward
+      LoadBalancerArn: !Ref SampleAlb
+      Port: !Ref AlbPort
+      Protocol: HTTP
+  # Make TargetGroup
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-elasticloadbalancingv2-targetgroup.html
+  SampleAlbTargetGroup:
+    Type: 'AWS::ElasticLoadBalancingV2::TargetGroup'
+    Properties:
+      Port: !Ref ContainerPort
+      Protocol: HTTP
+      TargetType: ip
+      HealthCheckPath: !Ref HealthCheckPath
+      VpcId: !ImportValue
+        'Fn::Sub': '${NetworkStackName}-SampleVPC'
+
+# Outputs
+# https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/outputs-section-structure.html
+Outputs:
+  SampleAlbListener:
+    Value: !Ref SampleAlbListener
+    Export:
+      Name: !Sub "${AWS::StackName}-SampleAlbListener"
+  SampleAlbTargetGroup:
+    Value: !Ref SampleAlbTargetGroup
+    Export:
+      Name: !Sub "${AWS::StackName}-SampleAlbTargetGroup"
+  SampleSecurityGroupIdForAlb:
+    Value: !GetAtt SampleSecurityGroupForAlb.GroupId
+    Export:
+      Name: !Sub "${AWS::StackName}-SampleSecurityGroupIdForAlb"
+  SampleAlbPort:
+    Value: !Ref AlbPort
+    Export:
+      Name: !Sub "${AWS::StackName}-SampleAlbPort"
+  SampleContainerPort:
+    Value: !Ref ContainerPort
+    Export:
+      Name: !Sub "${AWS::StackName}-SampleContainerPort"

@@ -1,0 +1,225 @@
+#
+# チュートリアル: Amazon ECS サービスへのプライベート統合を使用した HTTP API の構築
+#
+# ステップ 1: Amazon ECS サービスを作成する
+# https://docs.aws.amazon.com/ja_jp/apigateway/latest/developerguide/http-api-private-integration.html
+#
+Parameters:
+  NetworkStackName:
+    Type: String
+    Description: Name of private-subnet-for-ecs Stack
+    Default: sampleapp-network
+  AlbStackName:
+    Type: String
+    Description: Name of alb-for-ecs Stack
+    Default: sampleapp-alb
+  CognitoStackName:
+    Type: String
+    Description: Name of cognito-for-ecs Stack
+    Default: sampleapp-auth
+  ApiGwStackName:
+    Type: String
+    Description: Name of api-gateway-for-ecs Stack
+    Default: sampleapp-apigw
+  EcrImageName:
+    Type: String
+    Description: ECR Image Name
+    Default: sample/sampledemo
+Resources:
+  # Make SecurityGroupEgress
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-security-group-egress.html
+  SampleSecurityGroupEgressForAlb:
+    Type: 'AWS::EC2::SecurityGroupEgress'
+    Properties:
+      GroupId: !ImportValue
+        'Fn::Sub': '${AlbStackName}-SampleSecurityGroupIdForAlb'
+      IpProtocol: tcp
+      Description: Load balancer to target
+      DestinationSecurityGroupId: !GetAtt SampleSecurityGroupForEcs.GroupId
+      FromPort: !ImportValue
+        'Fn::Sub': '${AlbStackName}-SampleContainerPort'
+      ToPort: !ImportValue
+        'Fn::Sub': '${AlbStackName}-SampleContainerPort'
+
+  # Make IAM::Role
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-iam-role.html
+  SampleServiceTaskDefTaskRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: 'sts:AssumeRole'
+            Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+        Version: 2012-10-17
+
+  # Make LogGroup
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-logs-loggroup.html
+  SampleServiceTaskDefwebLogGroup:
+    Type: 'AWS::Logs::LogGroup'
+    UpdateReplacePolicy: Retain
+    DeletionPolicy: Retain
+  # Make IAM Policy
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-iam-policy.html
+  SampleServiceTaskDefExecutionRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: 'sts:AssumeRole'
+            Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+        Version: 2012-10-17
+  # Make IAM Policy
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-iam-policy.html
+  SampleServiceTaskDefExecutionRoleDefaultPolicy:
+    Type: 'AWS::IAM::Policy'
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Action:
+              - 'logs:CreateLogStream'
+              - 'logs:PutLogEvents'
+            Effect: Allow
+            Resource: !GetAtt SampleServiceTaskDefwebLogGroup.Arn
+          - Action:
+              - 'ecr:BatchGetImage'
+              - 'ecr:GetAuthorizationToken'
+              - 'ecr:GetDownloadUrlForLayer'
+              - 'ecr:DescribeRepositories'
+              - 'ecr:DescribeImage'
+            Resource: "*"
+            Effect: Allow
+        Version: 2012-10-17
+      PolicyName: !Sub "${AWS::StackName}-SampleServiceTaskDefExecutionRoleDefaultPolicy"
+      Roles:
+        - !Ref SampleServiceTaskDefExecutionRole
+
+  # Make Cluster
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ecs-cluster.html
+  SampleCluster:
+    Type: 'AWS::ECS::Cluster'
+
+  # Make TaskDefinition
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ecs-taskdefinition.html
+  SampleServiceTaskDef:
+    Type: 'AWS::ECS::TaskDefinition'
+    Properties:
+      ContainerDefinitions:
+        - Essential: true
+          Image: !Sub "${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${EcrImageName}"
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref SampleServiceTaskDefwebLogGroup
+              awslogs-stream-prefix: SampleService
+              awslogs-region: !Ref 'AWS::Region'
+          Name: web
+          PortMappings:
+            - ContainerPort: !ImportValue
+                'Fn::Sub': '${AlbStackName}-SampleContainerPort'
+              Protocol: tcp
+          Environment:
+            - Name: USER_POOL_ID
+              Value: !ImportValue
+                'Fn::Sub': '${CognitoStackName}-SampleUserPoolId'
+            - Name: APP_CLIENT_ID
+              Value: !ImportValue
+                'Fn::Sub': '${CognitoStackName}-SampleUserPoolClientId'
+            - Name: ID_POOL_ID
+              Value: !ImportValue
+                'Fn::Sub': '${CognitoStackName}-SampleIdPoolId'
+            - Name: MYDOMAIN
+              Value: !ImportValue
+                'Fn::Sub': '${CognitoStackName}-SampleDomainName'
+            - Name: REDIRECT_URI
+              Value: !ImportValue
+                'Fn::Sub': '${ApiGwStackName}-SampleExternalURL'
+      Cpu: '512'
+      ExecutionRoleArn: !GetAtt SampleServiceTaskDefExecutionRole.Arn
+      Family: >-
+        SampleServiceTaskDef
+      Memory: '2048'
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      TaskRoleArn: !GetAtt SampleServiceTaskDefTaskRole.Arn
+
+  # Make Service
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ecs-service.html
+  SampleService:
+    Type: 'AWS::ECS::Service'
+    Properties:
+      Cluster: !Ref SampleCluster
+      DeploymentConfiguration:
+        MaximumPercent: 200
+        MinimumHealthyPercent: 50
+      DesiredCount: 2
+      EnableECSManagedTags: false
+      HealthCheckGracePeriodSeconds: 60
+      LaunchType: FARGATE
+      LoadBalancers:
+        - ContainerName: web
+          ContainerPort: !ImportValue
+            'Fn::Sub': '${AlbStackName}-SampleContainerPort'
+          TargetGroupArn: !ImportValue
+            'Fn::Sub': '${AlbStackName}-SampleAlbTargetGroup'
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: DISABLED
+          SecurityGroups:
+            - !GetAtt SampleSecurityGroupForEcs.GroupId
+          Subnets:
+            - !ImportValue
+              'Fn::Sub': '${NetworkStackName}-SampleVPCPrivateSubnet1Subnet'
+            - !ImportValue
+              'Fn::Sub': '${NetworkStackName}-SampleVPCPrivateSubnet2Subnet'
+      TaskDefinition: !Ref SampleServiceTaskDef
+
+  # Make SecurityGroup
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-security-group.html
+  SampleSecurityGroupForEcs:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: SampleSecurityGroupForEcs
+      SecurityGroupEgress:
+        - CidrIp: 0.0.0.0/0
+          Description: Allow all outbound traffic by default
+          IpProtocol: '-1'
+      VpcId: !ImportValue
+        'Fn::Sub': '${NetworkStackName}-SampleVPC'
+  # Make SecurityGroupIngress
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-security-group-ingress.html
+  SampleSecurityGroupIngressForEcs:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      IpProtocol: tcp
+      Description: Load balancer to target
+      GroupId: !GetAtt SampleSecurityGroupForEcs.GroupId
+      SourceSecurityGroupId: !ImportValue
+        'Fn::Sub': '${AlbStackName}-SampleSecurityGroupIdForAlb'
+      FromPort: !ImportValue
+        'Fn::Sub': '${AlbStackName}-SampleContainerPort'
+      ToPort: !ImportValue
+        'Fn::Sub': '${AlbStackName}-SampleContainerPort'
+
+# Outputs
+# https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/outputs-section-structure.html
+Outputs:
+  SampleCluster:
+    Value: !Ref SampleCluster
+    Description: ECS Cluster Name
+    Export:
+      Name: !Sub "${AWS::StackName}-SampleCluster"
+  SampleServiceTaskDef:
+    Value: !Ref SampleServiceTaskDef
+    Description: ECS TaskDef ARN
+    Export:
+      Name: !Sub "${AWS::StackName}-SampleServiceTaskDef"
+  SampleService:
+    Value: !Ref SampleService
+    Description: ECS Service ARN
+    Export:
+      Name: !Sub "${AWS::StackName}-SampleService"

@@ -1,0 +1,464 @@
+#
+# ECS Sample
+#
+Resources:
+  # Make VPC
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-vpc.html
+  EcsSampleVPCIUXYC81Z:
+    Type: 'AWS::EC2::VPC'
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      InstanceTenancy: default
+      Tags:
+        - Key: Name
+          Value: EcsSampleVPC
+  # Make PublicSubnet1
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-subnet.html
+  EcsSampleVPCPublicSubnet1SubnetBE0B3CBD:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      CidrBlock: 10.0.0.0/18
+      VpcId: !Ref EcsSampleVPCIUXYC81Z
+      AvailabilityZone: !Select
+        - 0
+        - !GetAZs ''
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: 'aws-tutorial:subnet-name'
+          Value: Public
+        - Key: 'aws-tutorial:subnet-type'
+          Value: Public
+        - Key: Name
+          Value: >-
+            EcsSampleVPC/PublicSubnet1
+  # Make RouteTable
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-routetable.html
+  EcsSampleVPCPublicSubnet1RouteTableA63763CC:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref EcsSampleVPCIUXYC81Z
+      Tags:
+        - Key: Name
+          Value: >-
+            EcsSampleVPC/PublicSubnet1
+  # Make RouteTableAssociation
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-subnet-network-acl-assoc.html
+  EcsSampleVPCPublicSubnet1RouteTableAssociationFD6DF484:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      RouteTableId: !Ref EcsSampleVPCPublicSubnet1RouteTableA63763CC
+      SubnetId: !Ref EcsSampleVPCPublicSubnet1SubnetBE0B3CBD
+  # Make Route
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-route.html
+  EcsSampleVPCPublicSubnet1DefaultRouteD59FC1D2:
+    Type: 'AWS::EC2::Route'
+    Properties:
+      RouteTableId: !Ref EcsSampleVPCPublicSubnet1RouteTableA63763CC
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref EcsSampleVPCIGW3645F9D4
+    DependsOn:
+      - EcsSampleVPCVPCGW514A8E2A
+  # Make EIP
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-eip.html
+  EcsSampleVPCPublicSubnet1EIPD3DAF766:
+    Type: 'AWS::EC2::EIP'
+    Properties:
+      Domain: vpc
+      Tags:
+        - Key: Name
+          Value: >-
+            EcsSampleVPC/PublicSubnet1
+  # Make NetGateway
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-natgateway.html
+  EcsSampleVPCPublicSubnet1NATGatewayC5702CC8:
+    Type: 'AWS::EC2::NatGateway'
+    Properties:
+      AllocationId: !GetAtt
+        - EcsSampleVPCPublicSubnet1EIPD3DAF766
+        - AllocationId
+      SubnetId: !Ref EcsSampleVPCPublicSubnet1SubnetBE0B3CBD
+      Tags:
+        - Key: Name
+          Value: >-
+            EcsSampleVPC/PublicSubnet1
+  # Make Subnet2
+  EcsSampleVPCPublicSubnet2Subnet26685AB7:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      CidrBlock: 10.0.64.0/18
+      VpcId: !Ref EcsSampleVPCIUXYC81Z
+      AvailabilityZone: !Select
+        - 1
+        - !GetAZs ''
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: 'aws-tutorial:subnet-name'
+          Value: Public
+        - Key: 'aws-tutorial:subnet-type'
+          Value: Public
+        - Key: Name
+          Value: >-
+            EcsSampleVPC/PublicSubnet2
+  # Make RouteTable
+  EcsSampleVPCPublicSubnet2RouteTable356B306D:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref EcsSampleVPCIUXYC81Z
+      Tags:
+        - Key: Name
+          Value: >-
+            EcsSampleVPC/PublicSubnet2
+  # Make RouteTableAssociation
+  EcsSampleVPCPublicSubnet2RouteTableAssociation1035F5D0:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      RouteTableId: !Ref EcsSampleVPCPublicSubnet2RouteTable356B306D
+      SubnetId: !Ref EcsSampleVPCPublicSubnet2Subnet26685AB7
+  # Make Route
+  EcsSampleVPCPublicSubnet2DefaultRoute4AB2237D:
+    Type: 'AWS::EC2::Route'
+    Properties:
+      RouteTableId: !Ref EcsSampleVPCPublicSubnet2RouteTable356B306D
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref EcsSampleVPCIGW3645F9D4
+    DependsOn:
+      - EcsSampleVPCVPCGW514A8E2A
+  #  Make EIP
+  EcsSampleVPCPublicSubnet2EIP40226FDB:
+    Type: 'AWS::EC2::EIP'
+    Properties:
+      Domain: vpc
+      Tags:
+        - Key: Name
+          Value: >-
+            EcsSampleVPC/PublicSubnet2
+  # Make NetGateway
+  EcsSampleVPCPublicSubnet2NATGatewayE6EAEEAB:
+    Type: 'AWS::EC2::NatGateway'
+    Properties:
+      AllocationId: !GetAtt
+        - EcsSampleVPCPublicSubnet2EIP40226FDB
+        - AllocationId
+      SubnetId: !Ref EcsSampleVPCPublicSubnet2Subnet26685AB7
+      Tags:
+        - Key: Name
+          Value: >-
+            EcsSampleVPC/PublicSubnet2
+  # Make Subnet3
+  EcsSampleVPCPrivateSubnet1SubnetE5CDA06F:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      CidrBlock: 10.0.128.0/18
+      VpcId: !Ref EcsSampleVPCIUXYC81Z
+      AvailabilityZone: !Select
+        - 0
+        - !GetAZs ''
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: 'aws-tutorial:subnet-name'
+          Value: Private
+        - Key: 'aws-tutorial:subnet-type'
+          Value: Private
+        - Key: Name
+          Value: >-
+            EcsSampleVPC/PrivateSubnet1
+  # Make RouteTable
+  EcsSampleVPCPrivateSubnet1RouteTable2DE71EA5:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref EcsSampleVPCIUXYC81Z
+      Tags:
+        - Key: Name
+          Value: >-
+            EcsSampleVPC/PrivateSubnet1
+  # Make RouteTableAssociation
+  EcsSampleVPCPrivateSubnet1RouteTableAssociation0CFE385A:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      RouteTableId: !Ref EcsSampleVPCPrivateSubnet1RouteTable2DE71EA5
+      SubnetId: !Ref EcsSampleVPCPrivateSubnet1SubnetE5CDA06F
+  # Make Route
+  EcsSampleVPCPrivateSubnet1DefaultRouteAAEB83F7:
+    Type: 'AWS::EC2::Route'
+    Properties:
+      RouteTableId: !Ref EcsSampleVPCPrivateSubnet1RouteTable2DE71EA5
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref EcsSampleVPCPublicSubnet1NATGatewayC5702CC8
+  # Make Private Subnet
+  EcsSampleVPCPrivateSubnet2SubnetA9278FA5:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      CidrBlock: 10.0.192.0/18
+      VpcId: !Ref EcsSampleVPCIUXYC81Z
+      AvailabilityZone: !Select
+        - 1
+        - !GetAZs ''
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: 'aws-tutorial:subnet-name'
+          Value: Private
+        - Key: 'aws-tutorial:subnet-type'
+          Value: Private
+        - Key: Name
+          Value: >-
+            EcsSampleVPC/PrivateSubnet2
+  # Make RouteTable
+  EcsSampleVPCPrivateSubnet2RouteTable6E1CF234:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref EcsSampleVPCIUXYC81Z
+      Tags:
+        - Key: Name
+          Value: >-
+            EcsSampleVPC/PrivateSubnet2
+  # Make SubnetRouteTableAssociation
+  EcsSampleVPCPrivateSubnet2RouteTableAssociation7F682A6E:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      RouteTableId: !Ref EcsSampleVPCPrivateSubnet2RouteTable6E1CF234
+      SubnetId: !Ref EcsSampleVPCPrivateSubnet2SubnetA9278FA5
+  # Make Route
+  EcsSampleVPCPrivateSubnet2DefaultRoute012406AE:
+    Type: 'AWS::EC2::Route'
+    Properties:
+      RouteTableId: !Ref EcsSampleVPCPrivateSubnet2RouteTable6E1CF234
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref EcsSampleVPCPublicSubnet2NATGatewayE6EAEEAB
+  # Make InternetGateway
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-internetgateway.html
+  EcsSampleVPCIGW3645F9D4:
+    Type: 'AWS::EC2::InternetGateway'
+    Properties:
+      Tags:
+        - Key: Name
+          Value: EcsSampleVPC
+  # Make VPCGatewayAttachment
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-vpc-gateway-attachment.html
+  EcsSampleVPCVPCGW514A8E2A:
+    Type: 'AWS::EC2::VPCGatewayAttachment'
+    Properties:
+      VpcId: !Ref EcsSampleVPCIUXYC81Z
+      InternetGatewayId: !Ref EcsSampleVPCIGW3645F9D4
+
+  # Make Cluster
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ecs-cluster.html
+  EcsSampleCluster09C95435:
+    Type: 'AWS::ECS::Cluster'
+  # Make LoadBalancer
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-elasticloadbalancingv2-loadbalancer.html
+  EcsSampleServiceLB8E9ECEA5:
+    Type: 'AWS::ElasticLoadBalancingV2::LoadBalancer'
+    Properties:
+      LoadBalancerAttributes:
+        - Key: deletion_protection.enabled
+          Value: 'false'
+      Scheme: internal
+      SecurityGroups:
+        - !GetAtt
+          - EcsSampleServiceLBSecurityGroup22BA351A
+          - GroupId
+      Subnets:
+        - !Ref EcsSampleVPCPrivateSubnet1SubnetE5CDA06F
+        - !Ref EcsSampleVPCPrivateSubnet2SubnetA9278FA5
+      Type: application
+  # Make SecurityGroup
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-security-group.html
+  EcsSampleServiceLBSecurityGroup22BA351A:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: >-
+        Automatically created Security Group for ELB
+        PrivateIntegrationsStackEcsSampleServiceLBCB8E0368
+      SecurityGroupIngress:
+        - CidrIp: 0.0.0.0/0
+          Description: Allow from anyone on port 80
+          FromPort: 80
+          IpProtocol: tcp
+          ToPort: 80
+      VpcId: !Ref EcsSampleVPCIUXYC81Z
+  # Make SecurityGroupEgress
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-security-group-egress.html
+  EcsSampleServiceLBSecurityGrouptoPrivateIntegrationsStackEcsSampleServiceSecurityGroupD7C89143805EA68A3C:
+    Type: 'AWS::EC2::SecurityGroupEgress'
+    Properties:
+      GroupId: !GetAtt
+        - EcsSampleServiceLBSecurityGroup22BA351A
+        - GroupId
+      IpProtocol: tcp
+      Description: Load balancer to target
+      DestinationSecurityGroupId: !GetAtt
+        - EcsSampleServiceSecurityGroup334FF7AF
+        - GroupId
+      FromPort: 80
+      ToPort: 80
+  # Make Listener
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-elasticloadbalancingv2-listener.html
+  EcsSampleServiceLBPublicListener2554FECD:
+    Type: 'AWS::ElasticLoadBalancingV2::Listener'
+    Properties:
+      DefaultActions:
+        - TargetGroupArn: !Ref EcsSampleServiceLBPublicListenerECSGroup0E6605DB
+          Type: forward
+      LoadBalancerArn: !Ref EcsSampleServiceLB8E9ECEA5
+      Port: 80
+      Protocol: HTTP
+  # Make TargetGroup
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-properties-elasticloadbalancingv2-listener-targetgrouptuple.html
+  EcsSampleServiceLBPublicListenerECSGroup0E6605DB:
+    Type: 'AWS::ElasticLoadBalancingV2::TargetGroup'
+    Properties:
+      Port: 80
+      Protocol: HTTP
+      TargetType: ip
+      VpcId: !Ref EcsSampleVPCIUXYC81Z
+  # Make IAM::Role
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-iam-role.html
+  EcsSampleServiceTaskDefTaskRole2B89439A:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: 'sts:AssumeRole'
+            Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+        Version: 2012-10-17
+  # Make TaskDefinition
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ecs-taskdefinition.html
+  EcsSampleServiceTaskDef914930A0:
+    Type: 'AWS::ECS::TaskDefinition'
+    Properties:
+      ContainerDefinitions:
+        - Essential: true
+          Image: amazon/amazon-ecs-sample
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref EcsSampleServiceTaskDefwebLogGroupBA8BE497
+              awslogs-stream-prefix: EcsSampleService
+              awslogs-region: !Ref 'AWS::Region'
+          Name: web
+          PortMappings:
+            - ContainerPort: 80
+              Protocol: tcp
+      Cpu: '512'
+      ExecutionRoleArn: !GetAtt
+        - EcsSampleServiceTaskDefExecutionRoleC7103AEA
+        - Arn
+      Family: >-
+        PrivateIntegrationsStackEcsSampleServiceTaskDefB5E162FC
+      Memory: '2048'
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      TaskRoleArn: !GetAtt
+        - EcsSampleServiceTaskDefTaskRole2B89439A
+        - Arn
+  # Make LogGroup
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-logs-loggroup.html
+  EcsSampleServiceTaskDefwebLogGroupBA8BE497:
+    Type: 'AWS::Logs::LogGroup'
+    UpdateReplacePolicy: Retain
+    DeletionPolicy: Retain
+  # Make IAM Role
+  EcsSampleServiceTaskDefExecutionRoleC7103AEA:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: 'sts:AssumeRole'
+            Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+        Version: 2012-10-17
+  # Make IAM Policy
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-iam-policy.html
+  EcsSampleServiceTaskDefExecutionRoleDefaultPolicy0F96072D:
+    Type: 'AWS::IAM::Policy'
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Action:
+              - 'logs:CreateLogStream'
+              - 'logs:PutLogEvents'
+            Effect: Allow
+            Resource: !GetAtt
+              - EcsSampleServiceTaskDefwebLogGroupBA8BE497
+              - Arn
+        Version: 2012-10-17
+      PolicyName: >-
+        EcsSampleServiceTaskDefExecutionRoleDefaultPolicy0F96072D
+      Roles:
+        - !Ref EcsSampleServiceTaskDefExecutionRoleC7103AEA
+  # Make Service
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ecs-service.html
+  EcsSampleService73010F72:
+    Type: 'AWS::ECS::Service'
+    Properties:
+      Cluster: !Ref EcsSampleCluster09C95435
+      DeploymentConfiguration:
+        MaximumPercent: 200
+        MinimumHealthyPercent: 50
+      DesiredCount: 2
+      EnableECSManagedTags: false
+      HealthCheckGracePeriodSeconds: 60
+      LaunchType: FARGATE
+      LoadBalancers:
+        - ContainerName: web
+          ContainerPort: 80
+          TargetGroupArn: !Ref EcsSampleServiceLBPublicListenerECSGroup0E6605DB
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: DISABLED
+          SecurityGroups:
+            - !GetAtt
+              - EcsSampleServiceSecurityGroup334FF7AF
+              - GroupId
+          Subnets:
+            - !Ref EcsSampleVPCPrivateSubnet1SubnetE5CDA06F
+            - !Ref EcsSampleVPCPrivateSubnet2SubnetA9278FA5
+      TaskDefinition: !Ref EcsSampleServiceTaskDef914930A0
+    DependsOn:
+      - EcsSampleServiceLBPublicListenerECSGroup0E6605DB
+      - EcsSampleServiceLBPublicListener2554FECD
+  # Make SecurityGroup
+  EcsSampleServiceSecurityGroup334FF7AF:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: >-
+        EcsSampleService/Service/SecurityGroup
+      SecurityGroupEgress:
+        - CidrIp: 0.0.0.0/0
+          Description: Allow all outbound traffic by default
+          IpProtocol: '-1'
+      VpcId: !Ref EcsSampleVPCIUXYC81Z
+  # Make SecurityGroupIngress
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-security-group-ingress.html
+  EcsSampleServiceSecurityGroupfromPrivateIntegrationsStackEcsSampleServiceLBSecurityGroup37A9AEF980935D99E0:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      IpProtocol: tcp
+      Description: Load balancer to target
+      FromPort: 80
+      GroupId: !GetAtt
+        - EcsSampleServiceSecurityGroup334FF7AF
+        - GroupId
+      SourceSecurityGroupId: !GetAtt
+        - EcsSampleServiceLBSecurityGroup22BA351A
+        - GroupId
+      ToPort: 80
+# https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/outputs-section-structure.html
+Outputs:
+  EcsSampleServiceLoadBalancerDNSCBE42D83:
+    Value: !GetAtt
+      - EcsSampleServiceLB8E9ECEA5
+      - DNSName
+  EcsSampleServiceServiceURLB6E59CA2:
+    Value: !Join
+      - ''
+      - - 'http://'
+        - !GetAtt
+          - EcsSampleServiceLB8E9ECEA5
+          - DNSName

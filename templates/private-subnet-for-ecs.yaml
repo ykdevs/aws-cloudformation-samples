@@ -1,0 +1,273 @@
+#
+# チュートリアル: Amazon ECS サービスへのプライベート統合を使用した HTTP API の構築
+#
+# ステップ 1: Amazon ECS サービスを作成する
+# https://docs.aws.amazon.com/ja_jp/apigateway/latest/developerguide/http-api-private-integration.html
+#
+Parameters:
+  VpcCidrBlock:
+    Type: String
+    Description: VPC's CidrBlock
+    Default: 10.0.0.0/16
+  PrivateSubnet1CidrBlock:
+    Type: String
+    Description: Private Subnet1's CidrBlock
+    Default: 10.0.128.0/18
+  PrivateSubnet2CidrBlock:
+    Type: String
+    Description: Private Subnet2's CidrBlock
+    Default: 10.0.192.0/18
+  PublicSubnet1CidrBlock:
+    Type: String
+    Description: Public Subnet1's CidrBlock
+    Default: 10.0.0.0/18
+  PublicSubnet2CidrBlock:
+    Type: String
+    Description: Public Subnet2's CidrBlock
+    Default: 10.0.64.0/18
+Resources:
+  # Make VPC
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-vpc.html
+  SampleVPC:
+    Type: 'AWS::EC2::VPC'
+    Properties:
+      CidrBlock: !Ref VpcCidrBlock
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      InstanceTenancy: default
+      Tags:
+        - Key: Name
+          Value: SampleVPC
+  # Make PublicSubnet1
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-subnet.html
+  SampleVPCPublicSubnet1Subnet:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      CidrBlock: !Ref PublicSubnet1CidrBlock
+      VpcId: !Ref SampleVPC
+      AvailabilityZone: !Select
+        - 0
+        - !GetAZs ''
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: SampleVPC/PublicSubnet1
+  # Make RouteTable
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-routetable.html
+  SampleVPCPublicSubnet1RouteTable:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref SampleVPC
+      Tags:
+        - Key: Name
+          Value: SampleVPC/PublicSubnet1
+  # Make RouteTableAssociation
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-subnet-network-acl-assoc.html
+  SampleVPCPublicSubnet1RouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      RouteTableId: !Ref SampleVPCPublicSubnet1RouteTable
+      SubnetId: !Ref SampleVPCPublicSubnet1Subnet
+  # Make Route
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-route.html
+  SampleVPCPublicSubnet1DefaultRoute:
+    Type: 'AWS::EC2::Route'
+    Properties:
+      RouteTableId: !Ref SampleVPCPublicSubnet1RouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref SampleVPCIGW
+    DependsOn:
+      - SampleVPCVPCGW
+  # Make EIP
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-eip.html
+  SampleVPCPublicSubnet1EIP:
+    Type: 'AWS::EC2::EIP'
+    Properties:
+      Domain: vpc
+      Tags:
+        - Key: Name
+          Value: SampleVPC/PublicSubnet1
+  # Make NatGateway
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-natgateway.html
+  SampleVPCPublicSubnet1NATGateway:
+    Type: 'AWS::EC2::NatGateway'
+    Properties:
+      AllocationId: !GetAtt
+        - SampleVPCPublicSubnet1EIP
+        - AllocationId
+      SubnetId: !Ref SampleVPCPublicSubnet1Subnet
+      Tags:
+        - Key: Name
+          Value: SampleVPC/PublicSubnet1
+
+  # Make PublicSubnet2
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-subnet.html
+  SampleVPCPublicSubnet2Subnet:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      CidrBlock: !Ref PublicSubnet2CidrBlock
+      VpcId: !Ref SampleVPC
+      AvailabilityZone: !Select
+        - 1
+        - !GetAZs ''
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: SampleVPC/PublicSubnet2
+  # Make RouteTable
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-routetable.html
+  SampleVPCPublicSubnet2RouteTable:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref SampleVPC
+      Tags:
+        - Key: Name
+          Value: SampleVPC/PublicSubnet2
+  # Make RouteTableAssociation
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-subnet-network-acl-assoc.html
+  SampleVPCPublicSubnet2RouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      RouteTableId: !Ref SampleVPCPublicSubnet2RouteTable
+      SubnetId: !Ref SampleVPCPublicSubnet2Subnet
+  # Make Route
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-route.html
+  SampleVPCPublicSubnet2DefaultRoute:
+    Type: 'AWS::EC2::Route'
+    Properties:
+      RouteTableId: !Ref SampleVPCPublicSubnet2RouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref SampleVPCIGW
+    DependsOn:
+      - SampleVPCVPCGW
+  # Make EIP
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-eip.html
+  SampleVPCPublicSubnet2EIP:
+    Type: 'AWS::EC2::EIP'
+    Properties:
+      Domain: vpc
+      Tags:
+        - Key: Name
+          Value: SampleVPC/PublicSubnet2
+  # Make NetGateway
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-natgateway.html
+  SampleVPCPublicSubnet2NATGateway:
+    Type: 'AWS::EC2::NatGateway'
+    Properties:
+      AllocationId: !GetAtt
+        - SampleVPCPublicSubnet2EIP
+        - AllocationId
+      SubnetId: !Ref SampleVPCPublicSubnet2Subnet
+      Tags:
+        - Key: Name
+          Value: SampleVPC/PublicSubnet2
+
+  # Make PrivateSubnet1
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-subnet.html
+  SampleVPCPrivateSubnet1Subnet:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      CidrBlock: !Ref PrivateSubnet1CidrBlock
+      VpcId: !Ref SampleVPC
+      AvailabilityZone: !Select
+        - 0
+        - !GetAZs ''
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: SampleVPC/PrivateSubnet1
+  # Make RouteTable
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-routetable.html
+  SampleVPCPrivateSubnet1RouteTable:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref SampleVPC
+      Tags:
+        - Key: Name
+          Value: SampleVPC/PrivateSubnet1
+  # Make RouteTableAssociation
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-subnet-network-acl-assoc.html
+  SampleVPCPrivateSubnet1RouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      RouteTableId: !Ref SampleVPCPrivateSubnet1RouteTable
+      SubnetId: !Ref SampleVPCPrivateSubnet1Subnet
+  # Make Route
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-route.html
+  SampleVPCPrivateSubnet1DefaultRoute:
+    Type: 'AWS::EC2::Route'
+    Properties:
+      RouteTableId: !Ref SampleVPCPrivateSubnet1RouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref SampleVPCPublicSubnet1NATGateway
+
+  # Make PrivateSubnet2
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-subnet.html
+  SampleVPCPrivateSubnet2Subnet:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      CidrBlock: !Ref PrivateSubnet2CidrBlock
+      VpcId: !Ref SampleVPC
+      AvailabilityZone: !Select
+        - 1
+        - !GetAZs ''
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: SampleVPC/PrivateSubnet2
+  # Make RouteTable
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-routetable.html
+  SampleVPCPrivateSubnet2RouteTabl:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref SampleVPC
+      Tags:
+        - Key: Name
+          Value: SampleVPC/PrivateSubnet2
+  # Make RouteTableAssociation
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-subnet-network-acl-assoc.html
+  SampleVPCPrivateSubnet2RouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      RouteTableId: !Ref SampleVPCPrivateSubnet2RouteTabl
+      SubnetId: !Ref SampleVPCPrivateSubnet2Subnet
+  # Make Route
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-route.html
+  SampleVPCPrivateSubnet2DefaultRoute:
+    Type: 'AWS::EC2::Route'
+    Properties:
+      RouteTableId: !Ref SampleVPCPrivateSubnet2RouteTabl
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref SampleVPCPublicSubnet2NATGateway
+
+  # Make InternetGateway
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-internetgateway.html
+  SampleVPCIGW:
+    Type: 'AWS::EC2::InternetGateway'
+    Properties:
+      Tags:
+        - Key: Name
+          Value: SampleVPC
+  # Make VPCGatewayAttachment
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-vpc-gateway-attachment.html
+  SampleVPCVPCGW:
+    Type: 'AWS::EC2::VPCGatewayAttachment'
+    Properties:
+      VpcId: !Ref SampleVPC
+      InternetGatewayId: !Ref SampleVPCIGW
+
+# Outputs
+# https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/outputs-section-structure.html
+Outputs:
+  SampleVPC:
+    Value: !Ref SampleVPC
+    Export:
+      Name: !Sub "${AWS::StackName}-SampleVPC"
+  SampleVPCPrivateSubnet1Subnet:
+    Value: !Ref SampleVPCPrivateSubnet1Subnet
+    Export:
+      Name: !Sub "${AWS::StackName}-SampleVPCPrivateSubnet1Subnet"
+  SampleVPCPrivateSubnet2Subnet:
+    Value: !Ref SampleVPCPrivateSubnet2Subnet
+    Export:
+      Name: !Sub "${AWS::StackName}-SampleVPCPrivateSubnet2Subnet"

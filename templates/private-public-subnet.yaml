@@ -68,8 +68,7 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub
-            - "${StackName}-PublicSubnet1"
-            - "StackName": !Ref AWS::StackName
+            - "${AWS::StackName}-PublicSubnet1"
     DependsOn:
       - Vpc
   # Make RouteTable
@@ -80,8 +79,7 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub
-            - "${StackName}-PublicSubnet1"
-            - "StackName": !Ref AWS::StackName
+            - "${AWS::StackName}-PublicSubnet1"
     DependsOn:
       - Vpc
   # Make RouteTableAssociation
@@ -117,8 +115,7 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub
-            - "${StackName}-PublicSubnet2"
-            - "StackName": !Ref AWS::StackName
+            - "${AWS::StackName}-PublicSubnet2"
     DependsOn:
       - Vpc
   # Make RouteTable
@@ -129,8 +126,7 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub
-            - "${StackName}-PublicSubnet2"
-            - "StackName": !Ref AWS::StackName
+            - "${AWS::StackName}-PublicSubnet2"
     DependsOn:
       - Vpc
   # Make RouteTableAssociation
@@ -161,8 +157,7 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub
-            - "${StackName}-PublicSubnet1"
-            - "StackName": !Ref AWS::StackName
+            - "${AWS::StackName}-PublicSubnet1"
   # Make NatGateway
   NatGateway1:
     Type: 'AWS::EC2::NatGateway'
@@ -174,8 +169,7 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub
-            - "${StackName}-PublicSubnet1"
-            - "StackName": !Ref AWS::StackName
+            - "${AWS::StackName}-PublicSubnet1"
 
   # Make PrivateSubnet1
   PrivateSubnet1Subnet:
@@ -190,8 +184,7 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub
-            - "${StackName}-PrivateSubnet1"
-            - "StackName": !Ref AWS::StackName
+            - "${AWS::StackName}-PrivateSubnet1"
   # Make RouteTable
   PrivateSubnet1RouteTable:
     Type: 'AWS::EC2::RouteTable'
@@ -200,8 +193,7 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub
-            - "${StackName}-PrivateSubnet1"
-            - "StackName": !Ref AWS::StackName
+            - "${AWS::StackName}-PrivateSubnet1"
     DependsOn:
       - Vpc
   # Make RouteTableAssociation
@@ -232,8 +224,7 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub
-            - "${StackName}-PublicSubnet2"
-            - "StackName": !Ref AWS::StackName
+            - "${AWS::StackName}-PublicSubnet2"
   # Make NetGateway
   NatGateway2:
     Type: 'AWS::EC2::NatGateway'
@@ -245,8 +236,7 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub
-            - "${StackName}-PublicSubnet2"
-            - "StackName": !Ref AWS::StackName
+            - "${AWS::StackName}-PublicSubnet2"
 
   # Make PrivateSubnet2
   PrivateSubnet2Subnet:
@@ -261,8 +251,7 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub
-            - "${StackName}-PrivateSubnet2"
-            - "StackName": !Ref AWS::StackName
+            - "${AWS::StackName}-PrivateSubnet2"
   # Make RouteTable
   PrivateSubnet2RouteTable:
     Type: 'AWS::EC2::RouteTable'
@@ -271,8 +260,7 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub
-            - "${StackName}-PrivateSubnet2"
-            - "StackName": !Ref AWS::StackName
+            - "${AWS::StackName}-PrivateSubnet2"
     DependsOn:
       - Vpc
   # Make RouteTableAssociation
@@ -299,7 +287,7 @@ Resources:
 Outputs:
   VpcId:
     Value: !Ref Vpc
-    Description: VPC id
+    Description: VPC Id
 
   InternetGatewayId:
     Value: !Ref InternetGW

@@ -1,0 +1,242 @@
+#
+# Cognitoの環境構築
+#
+Parameters:
+  UserPoolName:
+    Type: String
+    Description: UserPoolName
+    Default: SampleUserPool
+  DomainName:
+    Type: String
+    Description: DomainName Prefxi for UserPool (ex. https://${DomainName}.auth.ap-northeast-1.amazoncognito.com)
+    Default: sample-demo
+  ClientName:
+    Type: String
+    Description: ClientApplicationName
+    Default: SampleClient
+  IdPoolName:
+    Type: String
+    Description: IdPoolName
+    Default: SampleIdPool
+
+Resources:
+  # Create UserPool
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-cognito-userpool.html
+  SampleUserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: !Ref UserPoolName
+      AutoVerifiedAttributes:
+        - email
+      UsernameAttributes:
+        - email
+      UsernameConfiguration:
+        CaseSensitive: false
+      AccountRecoverySetting:
+        RecoveryMechanisms:
+          - Priority: 1
+            Name: verified_email
+          - Priority: 2
+            Name: verified_phone_number
+      Schema:
+        - Name: role
+          AttributeDataType: String
+          DeveloperOnlyAttribute: false
+          Mutable: true
+          Required: false
+          StringAttributeConstraints:
+            MinLength: 1
+            MaxLength: 256
+
+  # Create UserPoolDomain
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-cognito-userpooldomain.html
+  SampleUserPoolDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      Domain: !Ref DomainName
+      UserPoolId: !Ref SampleUserPool
+
+  # Create UserPoolClient
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-cognito-userpoolclient.html
+  SampleUserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      UserPoolId: !Ref SampleUserPool
+      ClientName: !Ref ClientName
+      RefreshTokenValidity: 30
+      AccessTokenValidity: 60
+      IdTokenValidity: 60
+      TokenValidityUnits:
+        AccessToken: minutes
+        IdToken: minutes
+        RefreshToken: days
+      ReadAttributes:
+        - "address"
+        - "birthdate"
+        - "custom:role"
+        - "email"
+        - "email_verified"
+        - "family_name"
+        - "gender"
+        - "given_name"
+        - "locale"
+        - "middle_name"
+        - "name"
+        - "nickname"
+        - "phone_number"
+        - "phone_number_verified"
+        - "picture"
+        - "preferred_username"
+        - "profile"
+        - "updated_at"
+        - "website"
+        - "zoneinfo"
+      WriteAttributes:
+        - "address"
+        - "birthdate"
+        - "custom:role"
+        - "email"
+        - "family_name"
+        - "gender"
+        - "given_name"
+        - "locale"
+        - "middle_name"
+        - "name"
+        - "nickname"
+        - "phone_number"
+        - "picture"
+        - "preferred_username"
+        - "profile"
+        - "updated_at"
+        - "website"
+        - "zoneinfo"
+      ExplicitAuthFlows:
+        - "ALLOW_REFRESH_TOKEN_AUTH"
+        - "ALLOW_USER_SRP_AUTH"
+      PreventUserExistenceErrors: "ENABLED"
+      SupportedIdentityProviders:
+        - "COGNITO"
+      CallbackURLs:
+        - "http://localhost:8080/callback"
+      LogoutURLs:
+        - "http://localhost:8080/logout"
+      AllowedOAuthFlows:
+        - "code"
+      AllowedOAuthScopes:
+        - "aws.cognito.signin.user.admin"
+        - "email"
+        - "openid"
+        - "phone"
+        - "profile"
+      AllowedOAuthFlowsUserPoolClient: true
+
+  # Create IdPool
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-properties-cognito-identitypool-cognitoidentityprovider.html
+  SampleIdPool:
+    Type: AWS::Cognito::IdentityPool
+    Properties:
+      IdentityPoolName: !Ref IdPoolName
+      CognitoIdentityProviders:
+        - ProviderName: !Sub "cognito-idp.${AWS::Region}.amazonaws.com/${SampleUserPool}"
+          ClientId: !Ref SampleUserPoolClient
+          ServerSideTokenCheck: false
+      AllowClassicFlow: false
+      AllowUnauthenticatedIdentities: false
+
+  # Create Auth IAM:Role
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-iam-role.html
+  SampleAuthRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: 'sts:AssumeRoleWithWebIdentity'
+            Effect: Allow
+            Principal:
+              Federated: "cognito-identity.amazonaws.com"
+            Condition:
+              StringEquals:
+                "cognito-identity.amazonaws.com:aud": !Ref SampleIdPool
+              "ForAnyValue:StringLike":
+                "cognito-identity.amazonaws.com:amr": "authenticated"
+        Version: 2012-10-17
+
+  # Make IAM Policy
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-iam-policy.html
+  SampleAuthRolePolicy:
+    Type: 'AWS::IAM::Policy'
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Action:
+              - 'mobileanalytics:PutEvents'
+              - 'cognito-sync:*'
+              - 'cognito-identity:*'
+            Resource: "*"
+            Effect: Allow
+        Version: 2012-10-17
+      PolicyName: !Sub "${AWS::StackName}-SampleAuthRolePolicy"
+      Roles:
+        - !Ref SampleAuthRole
+
+  # Create UnAuth IAM:Role
+  SampleUnAuthRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: 'sts:AssumeRoleWithWebIdentity'
+            Effect: Allow
+            Principal:
+              Federated: "cognito-identity.amazonaws.com"
+            Condition:
+              StringEquals:
+                "cognito-identity.amazonaws.com:aud": !Ref SampleIdPool
+              "ForAnyValue:StringLike":
+                "cognito-identity.amazonaws.com:amr": "unauthenticated"
+        Version: 2012-10-17
+
+  SampleUnAuthRolePolicy:
+    Type: 'AWS::IAM::Policy'
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Action:
+              - 'mobileanalytics:PutEvents'
+              - 'cognito-sync:*'
+            Resource: "*"
+            Effect: Allow
+        Version: 2012-10-17
+      PolicyName: !Sub "${AWS::StackName}-SampleUnAuthRolePolicy"
+      Roles:
+        - !Ref SampleUnAuthRole
+
+  # RoleAttachment for IdPool
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-cognito-identitypoolroleattachment.html
+  SampleIdPoolRoleAttachment:
+    Type: AWS::Cognito::IdentityPoolRoleAttachment
+    Properties:
+      IdentityPoolId: !Ref SampleIdPool
+      Roles:
+        "authenticated": !GetAtt SampleAuthRole.Arn
+        "unauthenticated": !GetAtt SampleUnAuthRole.Arn
+
+# Outputs
+# https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/outputs-section-structure.html
+Outputs:
+  SampleUserPoolId:
+    Value: !Ref SampleUserPool
+    Export:
+      Name: !Sub "${AWS::StackName}-SampleUserPoolId"
+  SampleUserPoolClientId:
+    Value: !Ref SampleUserPoolClient
+    Export:
+      Name: !Sub "${AWS::StackName}-SampleUserPoolClientId"
+  SampleIdPoolId:
+    Value: !Ref SampleIdPool
+    Export:
+      Name: !Sub "${AWS::StackName}-SampleIdPoolId"
+  SampleDomainName:
+    Value: !Ref DomainName
+    Export:
+      Name: !Sub "${AWS::StackName}-SampleDomainName"

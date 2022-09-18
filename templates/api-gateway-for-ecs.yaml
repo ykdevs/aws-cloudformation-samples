@@ -1,0 +1,98 @@
+#
+# チュートリアル: Amazon ECS サービスへのプライベート統合を使用した HTTP API の構築
+#
+# ステップ 2〜ステップ 5
+# https://docs.aws.amazon.com/ja_jp/apigateway/latest/developerguide/http-api-private-integration.html
+#
+Parameters:
+  NetworkStackName:
+    Type: String
+    Description: Name of private-subnet-for-ecs Stack
+    Default: sample-app-network
+  AlbStackName:
+    Type: String
+    Description: Name of alb-for-ecs Stack
+    Default: sample-app-alb
+
+Resources:
+  # Make VPC Link
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-apigatewayv2-vpclink.html
+  SampleVpcLink:
+    Type: 'AWS::ApiGatewayV2::VpcLink'
+    Properties:
+      Name: 'SampleVpcLink'
+      SubnetIds:
+        - !ImportValue
+          'Fn::Sub': '${NetworkStackName}-SampleVPCPrivateSubnet1Subnet'
+        - !ImportValue
+          'Fn::Sub': '${NetworkStackName}-SampleVPCPrivateSubnet2Subnet'
+
+  # Make Api
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-apigatewayv2-vpclink.html
+  SampleApi:
+    Type: 'AWS::ApiGatewayV2::Api'
+    Properties:
+      Name: 'SampleApi'
+      Description: 'Sample/ApiGateway'
+      ProtocolType: HTTP
+
+  # Make Api Stage
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-apigatewayv2-stage.html
+  SampleApiStage:
+    Type: 'AWS::ApiGatewayV2::Stage'
+    Properties:
+      StageName: '$default'
+      ApiId: !Ref SampleApi
+
+  # Make Api Integration
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-apigatewayv2-integration.html
+  SampleApiIntegration:
+    Type: 'AWS::ApiGatewayV2::Integration'
+    Properties:
+      ApiId: !Ref SampleApi
+      ConnectionId: !Ref SampleVpcLink
+      ConnectionType: 'VPC_LINK'
+      Description: 'SampleApiIntegration'
+      IntegrationMethod: 'ANY'
+      IntegrationType: 'HTTP_PROXY'
+      IntegrationUri: !ImportValue
+        'Fn::Sub': '${AlbStackName}-SampleAlbListener'
+      PayloadFormatVersion: 1.0
+
+  # Make Api Route
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-apigatewayv2-route.html
+  SampleApiRoute:
+    Type: 'AWS::ApiGatewayV2::Route'
+    Properties:
+      ApiId: !Ref SampleApi
+      RouteKey: 'ANY /{proxy+}'
+      Target: !Sub
+        - "integrations/${IntegrationId}"
+        - { IntegrationId: !Ref SampleApiIntegration }
+
+  # Make Api Deployment
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-apigatewayv2-deployment.html
+  SampleApiDeployment:
+    Type: AWS::ApiGatewayV2::Deployment
+    Properties:
+      ApiId: !Ref SampleApi
+      Description: 'SampleApiDeployment'
+      StageName: '$default'
+    DeletionPolicy: Retain
+    DependsOn:
+      - SampleApiStage
+      - SampleApiRoute
+
+# Outputs
+# https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/outputs-section-structure.html
+Outputs:
+  SampleExternalURL:
+    Value: !Join
+      - ''
+      - - 'https://'
+        - !Ref SampleApi
+        - '.execute-api.'
+        - !Ref 'AWS::Region'
+        - '.amazonaws.com'
+    Export:
+      Name: !Sub "${AWS::StackName}-SampleExternalURL"
