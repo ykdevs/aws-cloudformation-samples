@@ -8,23 +8,23 @@ Parameters:
   NetworkStackName:
     Type: String
     Description: Name of private-subnet-for-ecs Stack
-    Default: sampleapp-network
+    Default: sample-app-network
   AlbStackName:
     Type: String
     Description: Name of alb-for-ecs Stack
-    Default: sampleapp-alb
+    Default: sample-app-alb
   CognitoStackName:
     Type: String
     Description: Name of cognito-for-ecs Stack
-    Default: sampleapp-auth
+    Default: sample-app-auth
   ApiGwStackName:
     Type: String
     Description: Name of api-gateway-for-ecs Stack
-    Default: sampleapp-apigw
+    Default: sample-app-apigw
   EcrImageName:
     Type: String
     Description: ECR Image Name
-    Default: sample/sampledemo
+    Default: sample/sample-demo
 Resources:
   # Make SecurityGroupEgress
   # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-security-group-egress.html
