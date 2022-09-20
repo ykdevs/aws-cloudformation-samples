@@ -13,10 +13,6 @@ Parameters:
     Type: String
     Description: Name of alb-for-ecs Stack
     Default: sample-app-alb
-  CognitoStackName:
-    Type: String
-    Description: Name of cognito-for-ecs Stack
-    Default: sample-app-auth
   ApiGwStackName:
     Type: String
     Description: Name of api-gateway-for-ecs Stack
@@ -25,6 +21,10 @@ Parameters:
     Type: String
     Description: ECR Image Name
     Default: sample/sample-demo
+  SpringProfilesActive:
+    Type: String
+    Description: SPRING_PROFILES_ACTIVE
+    Default: prod
 Resources:
   # Make SecurityGroupEgress
   # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-security-group-egress.html
@@ -122,21 +122,8 @@ Resources:
                 'Fn::Sub': '${AlbStackName}-SampleContainerPort'
               Protocol: tcp
           Environment:
-            - Name: USER_POOL_ID
-              Value: !ImportValue
-                'Fn::Sub': '${CognitoStackName}-SampleUserPoolId'
-            - Name: APP_CLIENT_ID
-              Value: !ImportValue
-                'Fn::Sub': '${CognitoStackName}-SampleUserPoolClientId'
-            - Name: ID_POOL_ID
-              Value: !ImportValue
-                'Fn::Sub': '${CognitoStackName}-SampleIdPoolId'
-            - Name: MYDOMAIN
-              Value: !ImportValue
-                'Fn::Sub': '${CognitoStackName}-SampleDomainName'
-            - Name: REDIRECT_URI
-              Value: !ImportValue
-                'Fn::Sub': '${ApiGwStackName}-SampleExternalURL'
+            - Name: SPRING_PROFILES_ACTIVE
+              Value: !Sub '${SpringProfilesActive}'
       Cpu: '512'
       ExecutionRoleArn: !GetAtt SampleServiceTaskDefExecutionRole.Arn
       Family: >-

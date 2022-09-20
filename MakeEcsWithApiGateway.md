@@ -173,8 +173,9 @@ SecurityGroupはIngress(InBound)とEgress(OutBound)を同時に設定すると�
 | キー | 説明 | デフォルト | 備考 |
 |---|---|---|---|
 | NetworkStackName | Network構築のスタック名 | sample-app-network | Export値を取得するために利用する。 |
-| CognitoStackName | Cognito構築のスタック名 | sample-app-auth | Export値を取得するために利用する。 |
 | ApiGwStackName | ApiGw構築のスタック名 | sample-app-apigw | Export値を取得するために利用する。 |
+|EcrImageName| ECRのImage名 | sample/sample-demo | |
+| SpringProfilesActive | 環境変数SPRING_PROFILES_ACTIVE | prod | |
 
 ### 出力
 
