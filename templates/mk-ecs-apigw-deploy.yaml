@@ -41,7 +41,7 @@ Resources:
         RestrictPublicBuckets: true
 
   # Create CoeBuildRole
-  SampleCodeDeployRole:
+  SampleCodeBuildRole:
     Type: 'AWS::IAM::Role'
     Properties:
       AssumeRolePolicyDocument:
@@ -70,7 +70,7 @@ Resources:
               - logs:PutLogEvents
           - Effect: Allow
             Resource:
-              - !GetAtt SampleS3BucketForPipeline.Arn
+              - !Sub 'arn:aws:s3:::codepipeline-${AWS::Region}-*'
             Action:
               - s3:PutObject
               - s3:GetObject
@@ -98,7 +98,7 @@ Resources:
               - !Sub 'arn:aws:codebuild:${AWS::Region}:${AWS::AccountId}:report-group/${ProjectName}-*'
       PolicyName: !Sub "${AWS::StackName}-SampleCodeBuildPolicy"
       Roles:
-        - !Ref SampleCodeDeployRole
+        - !Ref SampleCodeBuildRole
 
   # Create CodeBuild
   # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-codebuild-project.html
@@ -140,7 +140,7 @@ Resources:
           Status: "DISABLED"
           EncryptionDisabled: false
       QueuedTimeoutInMinutes: 480
-      ServiceRole: !Ref SampleCodeDeployRole
+      ServiceRole: !Ref SampleCodeBuildRole
       Source:
         Type: "CODEPIPELINE"
         InsecureSsl: false
@@ -149,7 +149,7 @@ Resources:
 
   # Make IAM::Role
   # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-iam-role.html
-  SampleDeployRole:
+  SampleCodeDeployRole:
     Type: 'AWS::IAM::Role'
     Properties:
       AssumeRolePolicyDocument:
@@ -208,7 +208,7 @@ Resources:
                 - !ImportValue
                   'Fn::Sub': '${AlbStackName}-SampleAlbListener'
       OutdatedInstancesStrategy: "UPDATE"
-      ServiceRoleArn: !GetAtt SampleDeployRole.Arn
+      ServiceRoleArn: !GetAtt SampleCodeDeployRole.Arn
 
   # Create CoePipelineRole
   # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-iam-role.html
