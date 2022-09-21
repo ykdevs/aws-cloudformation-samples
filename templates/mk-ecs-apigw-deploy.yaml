@@ -18,12 +18,20 @@ Parameters:
     Type: String
     Description: GitHub Connection Arn
     Default: arn:aws:codestar-connections:ap-northeast-1:204633429525:connection/8783a866-9af3-4c29-b10f-20b22664d293
+  GitHubRepository:
+    Type: String
+    Description: Github Repository Name
+    Default: ykdevs/code-build-sample
+  GitHubRepositoryBranch:
+    Type: String
+    Description: Github Repository Branch Name
+    Default: main
 Resources:
   # Create S3 Bucket For Artifact
   # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-properties-s3-bucket.html
   SampleS3BucketForPipeline:
     Type: AWS::S3::Bucket
-    DeletionPolicy: Retain
+    DeletionPolicy: Delete
     Properties:
       BucketName: !Sub "codepipeline-${AWS::Region}-${ProjectName}"
       PublicAccessBlockConfiguration:
@@ -203,6 +211,7 @@ Resources:
       ServiceRoleArn: !GetAtt SampleDeployRole.Arn
 
   # Create CoePipelineRole
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-iam-role.html
   SampleCodePipelineRole:
     Type: 'AWS::IAM::Role'
     Properties:
@@ -354,7 +363,7 @@ Resources:
       ArtifactStore:
         Type: "S3"
         Location: !Ref SampleS3BucketForPipeline
-      RoleArn: !Ref SampleCodePipelineRole
+      RoleArn: !GetAtt SampleCodePipelineRole.Arn
       Stages:
         - Name: Source
           Actions:
@@ -366,10 +375,9 @@ Resources:
                 Version: "1"
               RunOrder: 1
               Configuration:
-                BranchName: main
+                BranchName: !Ref GitHubRepositoryBranch
                 ConnectionArn: !Ref GitHubConnectionArn
-                FullRepositoryId: !ImportValue
-                                  'Fn::Sub': "${EcsStackName}-SampleEcrImageName"
+                FullRepositoryId: !Ref GitHubRepository
                 OutputArtifactFormat: CODE_ZIP
               OutputArtifacts:
                 - Name: SourceArtifact
@@ -382,7 +390,7 @@ Resources:
                 Category: Build
                 Owner: AWS
                 Provider: CodeBuild
-                version: "1"
+                Version: "1"
               RunOrder: 1
               Configuration:
                 ProjectName: !Ref SampleCodeBuild
@@ -405,7 +413,7 @@ Resources:
                 ApplicationName: !Ref SampleDeployApplication
                 DeploymentGroupName: !Ref SampleDeployGroup
               InputArtifacts:
-                - name: BuildArtifact
+                - Name: BuildArtifact
               Region: !Sub '${AWS::Region}'
               Namespace: DeployVariables
 
