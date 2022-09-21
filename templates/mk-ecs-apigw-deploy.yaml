@@ -134,6 +134,10 @@ Resources:
             Value: !ImportValue
               'Fn::Sub': "${EcsStackName}-SampleEcrImageName"
             Type: PLAINTEXT
+          - Name: TASK_DEFINITION_NAME
+            Value: !ImportValue
+              'Fn::Sub': "${EcsStackName}-SampleServiceTaskDef"
+            Type: PLAINTEXT
       LogsConfig:
         CloudWatchLogs:
           Status: "ENABLED"
