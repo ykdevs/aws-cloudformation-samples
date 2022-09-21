@@ -1,16 +1,37 @@
 #
-# Test Template
+# Make Deploy Pipeline
 #
 Parameters:
+  AlbStackName:
+    Type: String
+    Description: Name of mk-ecs-apigw-alb Stack
+    Default: sample-app-alb
+  EcsStackName:
+    Type: String
+    Description: Name of mk-ecs-apigw-ecs-deploy Stack
+    Default: sample-app
   ProjectName:
     Type: String
     Description: Code Build Project Name
     Default: code-build-sample2
-  EcrImageName:
+  GitHubConnectionArn:
     Type: String
-    Description: ECR Image Name
-    Default: ykdevs-sample/code-build-sample
+    Description: GitHub Connection Arn
+    Default: arn:aws:codestar-connections:ap-northeast-1:204633429525:connection/8783a866-9af3-4c29-b10f-20b22664d293
 Resources:
+  # Create S3 Bucket For Artifact
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-properties-s3-bucket.html
+  SampleS3BucketForPipeline:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    Properties:
+      BucketName: !Sub "codepipeline-${AWS::Region}-${ProjectName}"
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
   # Create CoeBuildRole
   SampleCodeDeployRole:
     Type: 'AWS::IAM::Role'
@@ -41,7 +62,7 @@ Resources:
               - logs:PutLogEvents
           - Effect: Allow
             Resource:
-              - !Sub 'arn:aws:s3:::codepipeline-${AWS::Region}-*'
+              - !GetAtt SampleS3BucketForPipeline.Arn
             Action:
               - s3:PutObject
               - s3:GetObject
@@ -92,16 +113,17 @@ Resources:
         ComputeType: BUILD_GENERAL1_SMALL
         EnvironmentVariables:
           - Name: AWS_DEFAULT_REGION
-            Value: !Sub ${AWS::Region}
+            Value: !Sub '${AWS::Region}'
             Type: PLAINTEXT
           - Name: AWS_ACCOUNT_ID
-            Value: !Sub ${AWS::AccountId}
+            Value: !Sub '${AWS::AccountId}'
             Type: PLAINTEXT
           - Name: IMAGE_TAG
             Value: latest
             Type: PLAINTEXT
           - Name: IMAGE_REPO_NAME
-            Value: !Ref EcrImageName
+            Value: !ImportValue
+              'Fn::Sub': "${EcsStackName}-SampleEcrImageName"
             Type: PLAINTEXT
       LogsConfig:
         CloudWatchLogs:
@@ -116,6 +138,69 @@ Resources:
         InsecureSsl: false
       TimeoutInMinutes: 60
       Visibility: "PRIVATE"
+
+  # Make IAM::Role
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-iam-role.html
+  SampleDeployRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: 'sts:AssumeRole'
+            Effect: Allow
+            Principal:
+              Service: codedeploy.amazonaws.com
+        Version: 2012-10-17
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AWSCodeDeployRoleForECS
+
+  # Create Application
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-codedeploy-application.html
+  SampleDeployApplication:
+    Type: AWS::CodeDeploy::Application
+    Properties:
+      ComputePlatform: "ECS"
+
+  # Create DeployGroup
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-codedeploy-deploymentgroup.html
+  SampleDeployGroup:
+    Type: AWS::CodeDeploy::DeploymentGroup
+    Properties:
+      ApplicationName: !Ref SampleDeployApplication
+      AutoRollbackConfiguration:
+        Enabled: true
+        Events:
+          - "DEPLOYMENT_FAILURE"
+          - "DEPLOYMENT_STOP_ON_REQUEST"
+      BlueGreenDeploymentConfiguration:
+        TerminateBlueInstancesOnDeploymentSuccess:
+          Action: "TERMINATE"
+          TerminationWaitTimeInMinutes: 60
+        DeploymentReadyOption:
+          ActionOnTimeout: "CONTINUE_DEPLOYMENT"
+          WaitTimeInMinutes: 0
+      DeploymentConfigName: "CodeDeployDefault.ECSAllAtOnce"
+      DeploymentStyle:
+        DeploymentType: "BLUE_GREEN"
+        DeploymentOption: "WITH_TRAFFIC_CONTROL"
+      ECSServices:
+        - ServiceName: !ImportValue
+                       'Fn::Sub': '${EcsStackName}-SampleServiceName'
+          ClusterName: !ImportValue
+                       'Fn::Sub': '${EcsStackName}-SampleCluster'
+      LoadBalancerInfo:
+        TargetGroupPairInfoList:
+          - TargetGroups:
+              - Name: !ImportValue
+                  'Fn::Sub': '${AlbStackName}-SampleAlbTargetGroupName'
+              - Name: !ImportValue
+                  'Fn::Sub': '${AlbStackName}-SampleAlbTargetGroupName2'
+            ProdTrafficRoute:
+              ListenerArns:
+                - !ImportValue
+                  'Fn::Sub': '${AlbStackName}-SampleAlbListener'
+      OutdatedInstancesStrategy: "UPDATE"
+      ServiceRoleArn: !GetAtt SampleDeployRole.Arn
 
   # Create CoePipelineRole
   SampleCodePipelineRole:
@@ -268,7 +353,7 @@ Resources:
     Properties:
       ArtifactStore:
         Type: "S3"
-        Location: "codepipeline-ap-northeast-1-771613725877"
+        Location: !Ref SampleS3BucketForPipeline
       RoleArn: !Ref SampleCodePipelineRole
       Stages:
         - Name: Source
@@ -282,12 +367,13 @@ Resources:
               RunOrder: 1
               Configuration:
                 BranchName: main
-                ConnectionArn: arn:aws:codestar-connections:ap-northeast-1:204633429525:connection/8783a866-9af3-4c29-b10f-20b22664d293
-                FullRepositoryId: !Ref EcrImageName
+                ConnectionArn: !Ref GitHubConnectionArn
+                FullRepositoryId: !ImportValue
+                                  'Fn::Sub': "${EcsStackName}-SampleEcrImageName"
                 OutputArtifactFormat: CODE_ZIP
               OutputArtifacts:
                 - Name: SourceArtifact
-              Region: !Ref ${AWS::Region}
+              Region: !Sub '${AWS::Region}'
               Namespace: SourceVariables
         - Name: Build
           Actions:
@@ -304,7 +390,7 @@ Resources:
                 - Name: BuildArtifact
               InputArtifacts:
                 - Name: SourceArtifact
-              Region: !Ref ${AWS::Region}
+              Region: !Sub '${AWS::Region}'
               Namespace: BuildVariables
         - Name: Deploy
           Actions:
@@ -316,9 +402,31 @@ Resources:
                 Version: "1"
               RunOrder: 1
               Configuration:
-                ApplicationName: sample-app-SampleDeployApplication-1JI2FCD5608KD
-                DeploymentGroupName: sample-app-SampleDeployGroup-1UUMUTV54N2Q3
+                ApplicationName: !Ref SampleDeployApplication
+                DeploymentGroupName: !Ref SampleDeployGroup
               InputArtifacts:
                 - name: BuildArtifact
-              Region: !Ref ${AWS::Region}
+              Region: !Sub '${AWS::Region}'
               Namespace: DeployVariables
+
+Outputs:
+  SampleS3BucketForPipeline:
+    Value: !Ref SampleS3BucketForPipeline
+    Export:
+      Name: !Sub "${AWS::StackName}-SampleS3BucketForPipeline"
+  SampleCodeBuild:
+    Value: !Ref SampleCodeBuild
+    Export:
+      Name: !Sub "${AWS::StackName}-SampleCodeBuild"
+  SampleDeployApplication:
+    Value: !Ref SampleDeployApplication
+    Export:
+      Name: !Sub "${AWS::StackName}-SampleDeployApplication"
+  SampleDeployGroup:
+    Value: !Ref SampleDeployGroup
+    Export:
+      Name: !Sub "${AWS::StackName}-SampleDeployGroup"
+  SamplePipeline:
+    Value: !Ref SamplePipeline
+    Export:
+      Name: !Sub "${AWS::StackName}-SamplePipeline"

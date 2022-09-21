@@ -56,7 +56,7 @@ Resources:
 
   # Make LogGroup
   # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-logs-loggroup.html
-  SampleServiceTaskDefwebLogGroup:
+  SampleServiceTaskDefWebLogGroup:
     Type: 'AWS::Logs::LogGroup'
     UpdateReplacePolicy: Retain
     DeletionPolicy: Retain
@@ -83,7 +83,7 @@ Resources:
               - 'logs:CreateLogStream'
               - 'logs:PutLogEvents'
             Effect: Allow
-            Resource: !GetAtt SampleServiceTaskDefwebLogGroup.Arn
+            Resource: !GetAtt SampleServiceTaskDefWebLogGroup.Arn
           - Action:
               - 'ecr:BatchGetImage'
               - 'ecr:GetAuthorizationToken'
@@ -113,7 +113,7 @@ Resources:
           LogConfiguration:
             LogDriver: awslogs
             Options:
-              awslogs-group: !Ref SampleServiceTaskDefwebLogGroup
+              awslogs-group: !Ref SampleServiceTaskDefWebLogGroup
               awslogs-stream-prefix: SampleService
               awslogs-region: !Ref 'AWS::Region'
           Name: web
@@ -189,80 +189,6 @@ Resources:
       ToPort: !ImportValue
         'Fn::Sub': '${AlbStackName}-SampleContainerPort'
 
-  # Make TargetGroup
-  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-elasticloadbalancingv2-targetgroup.html
-  SampleAlbTargetGroup2:
-    Type: 'AWS::ElasticLoadBalancingV2::TargetGroup'
-    Properties:
-      Port: !ImportValue
-        'Fn::Sub': '${AlbStackName}-SampleContainerPort'
-      Protocol: HTTP
-      TargetType: ip
-      HealthCheckPath: !ImportValue
-        'Fn::Sub': '${AlbStackName}-SampleHealthCheckPath'
-      VpcId: !ImportValue
-        'Fn::Sub': '${NetworkStackName}-SampleVPC'
-
-  # Make IAM::Role
-  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-iam-role.html
-  SampleDeployRole:
-    Type: 'AWS::IAM::Role'
-    Properties:
-      AssumeRolePolicyDocument:
-        Statement:
-          - Action: 'sts:AssumeRole'
-            Effect: Allow
-            Principal:
-              Service: codedeploy.amazonaws.com
-        Version: 2012-10-17
-      ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/AWSCodeDeployRoleForECS
-
-  # Create Application
-  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-codedeploy-application.html
-  SampleDeployApplication:
-    Type: AWS::CodeDeploy::Application
-    Properties:
-      ComputePlatform: "ECS"
-
-  # Create DeployGroup
-  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-codedeploy-deploymentgroup.html
-  SampleDeployGroup:
-    Type: AWS::CodeDeploy::DeploymentGroup
-    Properties:
-      ApplicationName: !Ref SampleDeployApplication
-      AutoRollbackConfiguration:
-        Enabled: true
-        Events:
-          - "DEPLOYMENT_FAILURE"
-          - "DEPLOYMENT_STOP_ON_REQUEST"
-      BlueGreenDeploymentConfiguration:
-        TerminateBlueInstancesOnDeploymentSuccess:
-          Action: "TERMINATE"
-          TerminationWaitTimeInMinutes: 60
-        DeploymentReadyOption:
-          ActionOnTimeout: "CONTINUE_DEPLOYMENT"
-          WaitTimeInMinutes: 0
-      DeploymentConfigName: "CodeDeployDefault.ECSAllAtOnce"
-      DeploymentStyle:
-        DeploymentType: "BLUE_GREEN"
-        DeploymentOption: "WITH_TRAFFIC_CONTROL"
-      ECSServices:
-        - ServiceName: !GetAtt SampleService.Name
-          ClusterName: !Ref SampleCluster
-      LoadBalancerInfo:
-        TargetGroupPairInfoList:
-          - TargetGroups:
-              - Name: !ImportValue
-                      'Fn::Sub': '${AlbStackName}-SampleAlbTargetGroupName'
-              - Name: !GetAtt SampleAlbTargetGroup2.TargetGroupName
-            ProdTrafficRoute:
-              ListenerArns:
-                - !ImportValue
-                  'Fn::Sub': '${AlbStackName}-SampleAlbListener'
-      OutdatedInstancesStrategy: "UPDATE"
-      ServiceRoleArn: !GetAtt SampleDeployRole.Arn
-
 # Outputs
 # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/outputs-section-structure.html
 Outputs:
@@ -276,6 +202,11 @@ Outputs:
     Description: ECS TaskDef ARN
     Export:
       Name: !Sub "${AWS::StackName}-SampleServiceTaskDef"
+  SampleServiceName:
+    Value: !GetAtt SampleService.Name
+    Description: ECS Service ARN
+    Export:
+      Name: !Sub "${AWS::StackName}-SampleServiceName"
   SampleService:
     Value: !Ref SampleService
     Description: ECS Service ARN

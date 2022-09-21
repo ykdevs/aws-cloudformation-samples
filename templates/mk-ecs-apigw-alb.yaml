@@ -77,6 +77,17 @@ Resources:
       HealthCheckPath: !Ref HealthCheckPath
       VpcId: !ImportValue
         'Fn::Sub': '${NetworkStackName}-SampleVPC'
+  # Make TargetGroup
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-elasticloadbalancingv2-targetgroup.html
+  SampleAlbTargetGroup2:
+    Type: 'AWS::ElasticLoadBalancingV2::TargetGroup'
+    Properties:
+      Port: !Ref ContainerPort
+      Protocol: HTTP
+      TargetType: ip
+      HealthCheckPath: !Ref HealthCheckPath
+      VpcId: !ImportValue
+        'Fn::Sub': '${NetworkStackName}-SampleVPC'
 
 # Outputs
 # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/outputs-section-structure.html
@@ -93,6 +104,14 @@ Outputs:
     Value: !GetAtt SampleAlbTargetGroup.TargetGroupName
     Export:
       Name: !Sub "${AWS::StackName}-SampleAlbTargetGroupName"
+  SampleAlbTargetGroup2:
+    Value: !Ref SampleAlbTargetGroup2
+    Export:
+      Name: !Sub "${AWS::StackName}-SampleAlbTargetGroup2"
+  SampleAlbTargetGroupName2:
+    Value: !GetAtt SampleAlbTargetGroup2.TargetGroupName
+    Export:
+      Name: !Sub "${AWS::StackName}-SampleAlbTargetGroupName2"
   SampleSecurityGroupIdForAlb:
     Value: !GetAtt SampleSecurityGroupForAlb.GroupId
     Export:
