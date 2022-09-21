@@ -7,20 +7,20 @@
 Parameters:
   NetworkStackName:
     Type: String
-    Description: Name of private-subnet-for-ecs Stack
+    Description: Name of mk-ecs-apigw-network Stack
     Default: sample-app-network
   AlbStackName:
     Type: String
-    Description: Name of alb-for-ecs Stack
+    Description: Name of mk-ecs-apigw-alb Stack
     Default: sample-app-alb
   ApiGwStackName:
     Type: String
-    Description: Name of api-gateway-for-ecs Stack
+    Description: Name of mk-ecs-apigw-apigw Stack
     Default: sample-app-apigw
   EcrImageName:
     Type: String
     Description: ECR Image Name
-    Default: sample/sample-demo
+    Default: ykdevs-sample/code-build-sample
   SpringProfilesActive:
     Type: String
     Description: SPRING_PROFILES_ACTIVE
@@ -210,3 +210,7 @@ Outputs:
     Description: ECS Service ARN
     Export:
       Name: !Sub "${AWS::StackName}-SampleService"
+  SampleSecurityGroupForEcs:
+    Value: !Ref SampleSecurityGroupForEcs
+    Export:
+      Name: !Sub "${AWS::StackName}-SampleSecurityGroupForEcs"

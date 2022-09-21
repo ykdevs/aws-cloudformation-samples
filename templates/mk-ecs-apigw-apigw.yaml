@@ -7,11 +7,11 @@
 Parameters:
   NetworkStackName:
     Type: String
-    Description: Name of private-subnet-for-ecs Stack
+    Description: Name of mk-ecs-apigw-network Stack
     Default: sample-app-network
   AlbStackName:
     Type: String
-    Description: Name of alb-for-ecs Stack
+    Description: Name of mk-ecs-apigw-alb Stack
     Default: sample-app-alb
 
 Resources:

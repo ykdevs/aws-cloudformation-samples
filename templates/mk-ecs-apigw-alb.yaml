@@ -7,12 +7,12 @@
 Parameters:
   NetworkStackName:
     Type: String
-    Description: Name of private-subnet-for-ecs Stack
+    Description: Name of mk-ecs-apigw-network Stack
     Default: sample-app-network
   AlbPort:
     Type: Number
     Description: ALB Local Port
-    Default: 80
+    Default: 8080
   ContainerPort:
     Type: Number
     Description: Container Local Port

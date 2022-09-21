@@ -11,7 +11,7 @@
 
 ECSのネットワークを構築する。
 
-[private-subnet-for-ecs.yaml](templates/private-subnet-for-ecs.yaml)
+[mk-ecs-apigw-network.yaml](templates/mk-ecs-apigw-network.yaml)
 
 ### リソース
 
@@ -70,7 +70,7 @@ ECSのネットワークを構築する。
 
 ALBを構築する。
 
-[alb-for-ecs.yaml](templates/alb-for-ecs.yaml)
+[mk-ecs-apigw-alb.yaml](templates/mk-ecs-apigw-alb.yaml)
 
 ### リソース
 
@@ -109,7 +109,7 @@ API Gatewayを構築してインターネットからアクセスできるよう
 
 ※ サンプルでは認証はないので注意
 
-[api-gateway-for-ecs.yaml](templates/api-gateway-for-ecs.yaml)
+[mk-ecs-apigw-apigw.yaml](templates/mk-ecs-apigw-apigw.yaml)
 
 ### リソース
 
@@ -144,7 +144,7 @@ API Gatewayを構築してインターネットからアクセスできるよう
 
 作成したネットワーク上にFargateのECSを構築し、指定したDockerImageを展開する。
 
-[fargate-in-private-subnet.yaml](templates/fargate-in-private-subnet.yaml)
+[mk-ecs-apigw-ecs.yaml](templates/mk-ecs-apigw-ecs.yaml)
 
 ### リソース
 

@@ -1,16 +1,167 @@
 #
 # CloudFormation Template for ECS sample
 #
+Parameters:
+  NetworkStackName:
+    Type: String
+    Description: Name of mk-ecs-apigw-network Stack
+    Default: sample-app-network
+  AlbStackName:
+    Type: String
+    Description: Name of mk-ecs-apigw-alb Stack
+    Default: sample-app-alb
+  EcsStackName:
+    Type: String
+    Description: Name of mk-ecs-apigw-ecs Stack
+    Default: sample-app
+  SecurityGroupId:
+    Type: String
+    Description: SecurityGroupId
+    Default: sg-0755b6bd140bf29a3
+  HealthCheckPath:
+    Type: String
+    Description: Target Status Check Path
+    Default: /
 Resources:
-  # Make VPC
-  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-vpc.html
-  PrivateIntegrationsTutorialVPCD20D58E8:
-    Type: 'AWS::EC2::VPC'
+  # Make TargetGroup
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-elasticloadbalancingv2-targetgroup.html
+  SampleAlbTargetGroup1:
+    Type: 'AWS::ElasticLoadBalancingV2::TargetGroup'
     Properties:
-      CidrBlock: 10.0.0.0/16
-      EnableDnsHostnames: true
-      EnableDnsSupport: true
-      InstanceTenancy: default
-      Tags:
-        - Key: Name
-          Value: PrivateIntegrationsStack/PrivateIntegrationsTutorialVPC
+      Port: !ImportValue
+        'Fn::Sub': '${AlbStackName}-SampleContainerPort'
+      Protocol: HTTP
+      TargetType: ip
+      HealthCheckPath: !Ref HealthCheckPath
+      VpcId: !ImportValue
+        'Fn::Sub': '${NetworkStackName}-SampleVPC'
+
+  # Make ListenerRule
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-elasticloadbalancingv2-listenerrule.html
+  SampleAlbListenerRule:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      Actions:
+        - Type: "forward"
+          TargetGroupArn: !Ref SampleAlbTargetGroup1
+          ForwardConfig:
+            TargetGroups:
+              - TargetGroupArn: !Ref SampleAlbTargetGroup1
+                Weight: 1
+            TargetGroupStickinessConfig:
+              Enabled: false
+      Conditions:
+        - Field: "path-pattern"
+          Values:
+            - "/"
+          PathPatternConfig:
+            Values:
+              - "/"
+      ListenerArn: !ImportValue
+                   'Fn::Sub': '${AlbStackName}-SampleAlbListener'
+      Priority: 1
+
+  # Make TargetGroup
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-elasticloadbalancingv2-targetgroup.html
+  SampleAlbTargetGroup2:
+    Type: 'AWS::ElasticLoadBalancingV2::TargetGroup'
+    Properties:
+      Port: !ImportValue
+        'Fn::Sub': '${AlbStackName}-SampleContainerPort'
+      Protocol: HTTP
+      TargetType: ip
+      HealthCheckPath: !Ref HealthCheckPath
+      VpcId: !ImportValue
+        'Fn::Sub': '${NetworkStackName}-SampleVPC'
+
+  # Make Service
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ecs-service.html
+  SampleService:
+    Type: 'AWS::ECS::Service'
+    Properties:
+      Cluster: !ImportValue
+        'Fn::Sub': '${EcsStackName}-SampleCluster'
+      DeploymentController: CODE_DEPLOY
+      DesiredCount: 2
+      EnableECSManagedTags: false
+      HealthCheckGracePeriodSeconds: 60
+      LaunchType: FARGATE
+      LoadBalancers:
+        - ContainerName: web
+          ContainerPort: !ImportValue
+            'Fn::Sub': '${AlbStackName}-SampleContainerPort'
+          TargetGroupArn: !ImportValue
+            'Fn::Sub': '${AlbStackName}-SampleAlbTargetGroup'
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: DISABLED
+          SecurityGroups:
+            - !Ref SecurityGroupId
+          Subnets:
+            - !ImportValue
+              'Fn::Sub': '${NetworkStackName}-SampleVPCPrivateSubnet1Subnet'
+            - !ImportValue
+              'Fn::Sub': '${NetworkStackName}-SampleVPCPrivateSubnet2Subnet'
+      TaskDefinition: !ImportValue
+        'Fn::Sub': '${EcsStackName}-SampleServiceTaskDef'
+
+  # Make IAM::Role
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-iam-role.html
+  SampleDeployRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: 'sts:AssumeRole'
+            Effect: Allow
+            Principal:
+              Service: codedeploy.amazonaws.com
+        Version: 2012-10-17
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AWSCodeDeployRoleForECS
+
+  # Create Application
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-codedeploy-application.html
+  SampleDeployApplication:
+    Type: AWS::CodeDeploy::Application
+    Properties:
+      ComputePlatform: "ECS"
+
+  # Create DeployGroup
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-codedeploy-deploymentgroup.html
+  SampleDeployGroup:
+    Type: AWS::CodeDeploy::DeploymentGroup
+    Properties:
+      ApplicationName: !Ref SampleDeployApplication
+      AutoRollbackConfiguration:
+        enabled: true
+        events:
+          - "DEPLOYMENT_FAILURE"
+          - "DEPLOYMENT_STOP_ON_REQUEST"
+      BlueGreenDeploymentConfiguration:
+        terminateBlueInstancesOnDeploymentSuccess:
+          action: "TERMINATE"
+          terminationWaitTimeInMinutes: 60
+        deploymentReadyOption:
+          actionOnTimeout: "CONTINUE_DEPLOYMENT"
+          waitTimeInMinutes: 0
+      DeploymentConfigName: "CodeDeployDefault.ECSAllAtOnce"
+      DeploymentStyle:
+        deploymentType: "BLUE_GREEN"
+        deploymentOption: "WITH_TRAFFIC_CONTROL"
+      ECSServices:
+        - serviceName: !Ref SampleService
+          clusterName: !ImportValue:
+            'Fn::Sub': '${EcsStackName}-SampleCluster'
+      LoadBalancerInfo:
+        targetGroupPairInfoList:
+          targetGroups:
+            - name: !Ref SampleAlbTargetGroup1
+            - name: !Ref SampleAlbTargetGroup2
+          prodTrafficRoute:
+            listenerArns:
+              - !ImportValue
+                  'Fn::Sub': '${AlbStackName}-SampleAlbListener'
+      OutdatedInstancesStrategy: "UPDATE"
+      ServiceRoleArn: arn:aws:iam::204633429525:role/code-deploy-ecs-sample-role
+
