@@ -20,7 +20,7 @@ Parameters:
   HealthCheckPath:
     Type: String
     Description: Target Status Check Path
-    Default: /status
+    Default: /
 Resources:
   # Make SecurityGroup
   # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-security-group.html
@@ -61,8 +61,8 @@ Resources:
     Type: 'AWS::ElasticLoadBalancingV2::Listener'
     Properties:
       DefaultActions:
-        - TargetGroupArn: !Ref SampleAlbTargetGroup
-          Type: forward
+        - Type: forward
+          TargetGroupArn: !Ref SampleAlbTargetGroup
       LoadBalancerArn: !Ref SampleAlb
       Port: !Ref AlbPort
       Protocol: HTTP
@@ -101,3 +101,7 @@ Outputs:
     Value: !Ref ContainerPort
     Export:
       Name: !Sub "${AWS::StackName}-SampleContainerPort"
+  SampleHealthCheckPath:
+    Value: !Ref HealthCheckPath
+    Export:
+      Name: !Sub "${AWS::StackName}-HealthCheckPath"

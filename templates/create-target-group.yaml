@@ -1,0 +1,68 @@
+#
+# Create
+#
+Parameters:
+  NetworkStackName:
+    Type: String
+    Description: Name of mk-ecs-apigw-network Stack
+    Default: sample-app-network
+  AlbStackName:
+    Type: String
+    Description: Name of mk-ecs-apigw-alb Stack
+    Default: sample-app-alb
+  EcsStackName:
+    Type: String
+    Description: Name of mk-ecs-apigw-ecs Stack
+    Default: sample-app
+  HealthCheckPath:
+    Type: String
+    Description: Target Status Check Path
+    Default: /
+Resources:
+  # Make TargetGroup
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-elasticloadbalancingv2-targetgroup.html
+  SampleAlbTargetGroup1:
+    Type: 'AWS::ElasticLoadBalancingV2::TargetGroup'
+    Properties:
+      Port: !ImportValue
+        'Fn::Sub': '${AlbStackName}-SampleContainerPort'
+      Protocol: HTTP
+      TargetType: ip
+      HealthCheckPath: !Ref HealthCheckPath
+      VpcId: !ImportValue
+        'Fn::Sub': '${NetworkStackName}-SampleVPC'
+
+  # Make ListenerRule
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-elasticloadbalancingv2-listenerrule.html
+  SampleAlbListenerRule:
+    Type: 'AWS::ElasticLoadBalancingV2::ListenerRule'
+    Properties:
+      Priority: 1
+      Conditions:
+        - Field: "path-pattern"
+          Values:
+            - "/"
+      Actions:
+        - Type: "forward"
+          TargetGroupArn: !Ref SampleAlbTargetGroup1
+          ForwardConfig:
+            TargetGroups:
+              - TargetGroupArn: !Ref SampleAlbTargetGroup1
+                Weight: 1
+            TargetGroupStickinessConfig:
+              Enabled: false
+      ListenerArn: !ImportValue
+        'Fn::Sub': '${AlbStackName}-SampleAlbListener'
+
+  # Make TargetGroup
+  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-elasticloadbalancingv2-targetgroup.html
+  SampleAlbTargetGroup2:
+    Type: 'AWS::ElasticLoadBalancingV2::TargetGroup'
+    Properties:
+      Port: !ImportValue
+        'Fn::Sub': '${AlbStackName}-SampleContainerPort'
+      Protocol: HTTP
+      TargetType: ip
+      HealthCheckPath: !Ref HealthCheckPath
+      VpcId: !ImportValue
+        'Fn::Sub': '${NetworkStackName}-SampleVPC'
