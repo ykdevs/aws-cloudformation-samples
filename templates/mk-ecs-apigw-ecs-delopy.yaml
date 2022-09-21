@@ -126,8 +126,7 @@ Resources:
               Value: !Sub '${SpringProfilesActive}'
       Cpu: '512'
       ExecutionRoleArn: !GetAtt SampleServiceTaskDefExecutionRole.Arn
-      Family: >-
-        SampleServiceTaskDef
+      Family: !Sub "${AWS::StackName}-SampleServiceTaskDef"
       Memory: '2048'
       NetworkMode: awsvpc
       RequiresCompatibilities:
@@ -255,8 +254,8 @@ Resources:
         TargetGroupPairInfoList:
           - TargetGroups:
               - Name: !ImportValue
-                      'Fn::Sub': '${AlbStackName}-SampleAlbTargetGroup'
-              - Name: !Ref SampleAlbTargetGroup2
+                      'Fn::Sub': '${AlbStackName}-SampleAlbTargetGroupName'
+              - Name: !GetAtt SampleAlbTargetGroup2.TargetGroupName
             ProdTrafficRoute:
               ListenerArns:
                 - !ImportValue
@@ -286,3 +285,7 @@ Outputs:
     Value: !Ref SampleSecurityGroupForEcs
     Export:
       Name: !Sub "${AWS::StackName}-SampleSecurityGroupForEcs"
+  SampleEcrImageName:
+    Value: !Ref EcrImageName
+    Export:
+      Name: !Sub "${AWS::StackName}-SampleEcrImageName"

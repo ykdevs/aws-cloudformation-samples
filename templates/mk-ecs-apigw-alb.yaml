@@ -89,6 +89,10 @@ Outputs:
     Value: !Ref SampleAlbTargetGroup
     Export:
       Name: !Sub "${AWS::StackName}-SampleAlbTargetGroup"
+  SampleAlbTargetGroupName:
+    Value: !GetAtt SampleAlbTargetGroup.TargetGroupName
+    Export:
+      Name: !Sub "${AWS::StackName}-SampleAlbTargetGroupName"
   SampleSecurityGroupIdForAlb:
     Value: !GetAtt SampleSecurityGroupForAlb.GroupId
     Export:
@@ -104,4 +108,4 @@ Outputs:
   SampleHealthCheckPath:
     Value: !Ref HealthCheckPath
     Export:
-      Name: !Sub "${AWS::StackName}-HealthCheckPath"
+      Name: !Sub "${AWS::StackName}-SampleHealthCheckPath"
