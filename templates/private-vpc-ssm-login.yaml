@@ -16,6 +16,10 @@ Parameters:
   KeyName:
     Description: SSH Key Name
     Type: AWS::EC2::KeyPair::KeyName
+  AmiId:
+    Type: String
+    Description: AMI-ID for EC2
+    Default: ami-05a03e6058638183d
 
 Resources:
 
@@ -99,7 +103,7 @@ Resources:
   VpcSubnetEC2Instance:
     Type: AWS::EC2::Instance
     Properties:
-      ImageId: "ami-0076451230a62ad66"
+      ImageId: !Ref AmiId
       InstanceType: "t2.micro"
       KeyName: !Ref KeyName
       SecurityGroupIds:
