@@ -32,10 +32,6 @@ Parameters:
     Type: String
     Description: VPC1's CidrBlock
     Default: 192.168.0.0/24
-  Vpc2CidrBlock:
-    Type: String
-    Description: VPC2's CidrBlock
-    Default: 192.168.1.0/24
   Vpc1Subnet1CidrBlock:
     Type: String
     Description: VPC1 Subnet1's CidrBlock
@@ -48,6 +44,10 @@ Parameters:
     Type: String
     Description: VPC1 Subnet2's NatGateway IpAddress
     Default: 192.168.0.20
+  Vpc2CidrBlock:
+    Type: String
+    Description: VPC2's CidrBlock
+    Default: 192.168.1.0/24
   Vpc2Subnet1CidrBlock:
     Type: String
     Description: VPC2 Subnet1's CidrBlock
@@ -311,6 +311,7 @@ Resources:
       ServiceName: !Sub "com.amazonaws.${AWS::Region}.s3"
       RouteTableIds:
         - !Ref Vpc1Subnet1RouteTable
+        - !Ref Vpc1Subnet2RouteTable
       VpcEndpointType: "Gateway"
       VpcId: !Ref Vpc1
 

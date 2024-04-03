@@ -94,3 +94,38 @@ VPC 接続オプションを変更する からカスタマーゲートウェイ
 
 ![Site-To-Site-VPN23.png](images/Site-To-Site-VPN23.png)
 ![Site-To-Site-VPN24.png](images/Site-To-Site-VPN24.png)
+
+# EC2にログインして接続確認
+
+秘密鍵を設定
+
+```shell
+cd
+mkdir -m 755 .ssh
+vi .ssh/id_rsa
+chmod 400 .ssh/id_rsa
+```
+
+```shell
+VPC1_SUBNET1_EC2=ip-192-168-0-9.ap-northeast-1.compute.internal
+VPC1_SUBNET2_EC2=ip-192-168-0-22.ap-northeast-1.compute.internal
+VPC2_SUBNET1_EC2=ip-192-168-1-4.ap-northeast-1.compute.internal
+```
+
+同一EC2
+
+```shell
+ssh -i .ssh/id_rsa ec2-user@${VPC1_SUBNET1_EC2}
+```
+
+同一VPC内EC2
+
+```shell
+ssh -i .ssh/id_rsa ec2-user@${VPC1_SUBNET2_EC2}
+```
+
+Site-To-Site VPN経由
+
+```shell
+ssh -i .ssh/id_rsa ec2-user@${VPC2_SUBNET1_EC2}
+```

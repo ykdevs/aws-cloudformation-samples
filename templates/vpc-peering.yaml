@@ -5,19 +5,19 @@ Parameters:
   Vpc1CidrBlock:
     Type: String
     Description: VPC1's CidrBlock
-    Default: 192.168.0.0/24
-  Vpc2CidrBlock:
-    Type: String
-    Description: VPC2's CidrBlock
-    Default: 192.168.1.0/24
+    Default: 172.16.0.0/24
   Vpc1Subnet1CidrBlock:
     Type: String
     Description: VPC1 Subnet1's CidrBlock
-    Default: 192.168.0.0/28
+    Default: 172.16.0.0/28
+  Vpc2CidrBlock:
+    Type: String
+    Description: VPC2's CidrBlock
+    Default: 172.16.1.0/24
   Vpc2Subnet1CidrBlock:
     Type: String
     Description: VPC2 Subnet1's CidrBlock
-    Default: 192.168.1.0/28
+    Default: 172.16.1.0/28
   KeyName:
     Description: SSH Key Name
     Type: AWS::EC2::KeyPair::KeyName
@@ -337,6 +337,7 @@ Resources:
       VpcEndpointType: "Gateway"
       VpcId: !Ref Vpc2
 
+  # VPC Peering to VPC2
   VpcPeeringBetweenVpc1ToVpc2:
     Type: AWS::EC2::VPCPeeringConnection
     Properties:
