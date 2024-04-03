@@ -112,11 +112,20 @@ VPC1_SUBNET2_EC2=ip-192-168-0-22.ap-northeast-1.compute.internal
 VPC2_SUBNET1_EC2=ip-192-168-1-4.ap-northeast-1.compute.internal
 ```
 
+VPC1_SUBNET1_EC2にログインして検証
+
 同一EC2
 
 ```shell
 ssh -i .ssh/id_rsa ec2-user@${VPC1_SUBNET1_EC2}
 ```
+
+```shell
+Last login: Wed Apr  3 06:23:41 2024 from 192.168.0.9
+[ec2-user@ip-192-168-0-9 ~]$ hostname
+ip-192-168-0-9.ap-northeast-1.compute.internal
+```
+
 
 同一VPC内EC2
 
@@ -124,8 +133,38 @@ ssh -i .ssh/id_rsa ec2-user@${VPC1_SUBNET1_EC2}
 ssh -i .ssh/id_rsa ec2-user@${VPC1_SUBNET2_EC2}
 ```
 
+```shell
+Last login: Wed Apr  3 06:23:54 2024 from 192.168.0.9
+[ec2-user@ip-192-168-0-22 ~]$ hostname
+ip-192-168-0-22.ap-northeast-1.compute.internal
+```
+
 Site-To-Site VPN経由
 
 ```shell
 ssh -i .ssh/id_rsa ec2-user@${VPC2_SUBNET1_EC2}
+```
+
+from がNatGatewayのIPになっている
+
+```shell
+Last login: Wed Apr  3 06:24:05 2024 from 192.168.0.20
+[ec2-user@ip-192-168-1-4 ~]$ hostname
+ip-192-168-1-4.ap-northeast-1.compute.internal
+```
+
+VPC1_SUBNET2_EC2にログインして検証
+
+Site-To-Site VPN経由
+
+```shell
+ssh -i .ssh/id_rsa ec2-user@${VPC2_SUBNET1_EC2}
+```
+
+from がEC2のIPになっている
+
+```shell
+Last login: Wed Apr  3 10:09:23 2024 from 192.168.0.22
+[ec2-user@ip-192-168-1-4 ~]$ hostname
+ip-192-168-1-4.ap-northeast-1.compute.internal
 ```
