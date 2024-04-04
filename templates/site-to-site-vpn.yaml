@@ -335,6 +335,7 @@ Resources:
       RouteTableIds:
         - !Ref Vpc1Subnet2RouteTable
       VpnGatewayId: !Ref Vpc1VPNGateway
+    DependsOn: Vpn1VPCGatewayAttachment
 
   Vpc1SecurityGroupIngressFromVpc2:
     Type: AWS::EC2::SecurityGroupIngress
@@ -551,6 +552,7 @@ Resources:
       RouteTableIds:
         - !Ref Vpc2Subnet1RouteTable
       VpnGatewayId: !Ref Vpc2VPNGateway
+    DependsOn: Vpn2VPCGatewayAttachment
 
   Vpc2SecurityGroupIngressFromVpc1NatGateway:
     Type: AWS::EC2::SecurityGroupIngress
