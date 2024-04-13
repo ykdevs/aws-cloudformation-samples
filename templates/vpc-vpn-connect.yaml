@@ -1,6 +1,10 @@
 #
 # 2つのVPCを構築してEC2にSoftware VPNを構築して接続する。
 #
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >-
+  Make 2 VPCs and connect them with Software VPN on EC2.
+
 Parameters:
   Vpc1CidrBlock:
     Type: String

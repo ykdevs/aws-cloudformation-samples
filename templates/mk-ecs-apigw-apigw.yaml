@@ -4,6 +4,10 @@
 # ステップ 2〜ステップ 5
 # https://docs.aws.amazon.com/ja_jp/apigateway/latest/developerguide/http-api-private-integration.html
 #
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >-
+  Sample ApiGateway
+
 Parameters:
   NetworkStackName:
     Type: String

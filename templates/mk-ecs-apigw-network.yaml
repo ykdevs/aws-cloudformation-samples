@@ -4,6 +4,10 @@
 # ステップ 1: Amazon ECS サービスを作成する
 # https://docs.aws.amazon.com/ja_jp/apigateway/latest/developerguide/http-api-private-integration.html
 #
+AWSTemplateFormatVersion: '2010-09-09'
+Description: |
+  Sample VPC for Amazon ECS Service with Private Integration
+
 Parameters:
   VpcCidrBlock:
     Type: String

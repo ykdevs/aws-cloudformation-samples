@@ -4,6 +4,10 @@
 # System ManagerのQuick Setupが必要
 # 更にAWS-QuickSetup-SSMHostMgmt-CollectInventoryの関連付けで30分必要な場合もある
 #
+AWSTemplateFormatVersion: "2010-09-09"
+Description: |
+  Make Private VPC for SSM Login
+
 Parameters:
   VpcCidrBlock:
     Type: String

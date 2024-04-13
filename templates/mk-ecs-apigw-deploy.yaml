@@ -1,6 +1,10 @@
 #
 # Make Deploy Pipeline
 #
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >-
+  Make Deploy Pipeline
+
 Parameters:
   AlbStackName:
     Type: String

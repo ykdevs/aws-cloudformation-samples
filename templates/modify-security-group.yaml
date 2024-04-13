@@ -1,6 +1,10 @@
 #
 # セキュリティグループにルールを追加する
 #
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >-
+    Add a rule to the security group
+
 Parameters:
   #セキュリティグループを作成するVPC
   SecurityGroupId:

@@ -4,6 +4,10 @@
 # ステップ 1: Amazon ECS サービスを作成する
 # https://docs.aws.amazon.com/ja_jp/apigateway/latest/developerguide/http-api-private-integration.html
 #
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >-
+  Sample Application LoadBalancer Stack
+
 Parameters:
   NetworkStackName:
     Type: String

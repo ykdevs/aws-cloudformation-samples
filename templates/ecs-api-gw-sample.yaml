@@ -3,6 +3,10 @@
 # APIGatewayで内向けALBを公開
 # https://qiita.com/ykdevs/items/fa84ec68491d2e1273e7
 #
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >-
+  API Gateway with Fargate
+
 Parameters:
   ApigwPort:
     Type: Number

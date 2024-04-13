@@ -2,6 +2,10 @@
 # Tutorial: Building an HTTP API with a private integration to an Amazon ECS service
 # https://docs.aws.amazon.com/apigateway/latest/developerguide/http-api-private-integration.html
 #
+AWSTemplateFormatVersion: "2010-09-09"
+Description: |
+  Make Private VPC for SSM Login
+
 Resources:
   # Make VPC
   # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-vpc.html

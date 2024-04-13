@@ -1,6 +1,10 @@
 #
 # ECS Sample
 #
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >-
+  ECS Sample
+
 Resources:
   # Make VPC
   # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-vpc.html

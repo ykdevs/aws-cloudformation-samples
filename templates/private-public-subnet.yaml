@@ -3,6 +3,10 @@
 # PublicSubnet1,2
 # PrivateSubnet1,2
 #
+AWSTemplateFormatVersion: '2010-09-09'
+Description: |
+  Make Private VPC for SSM Login
+
 Parameters:
   VpcCidrBlock:
     Type: String

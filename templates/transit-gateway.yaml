@@ -1,6 +1,10 @@
 #
 # Transit Gatewayを使ってVPCから外部への通信を１つのVPCに集約する
 #
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >-
+  Make Transit Gateway
+
 Parameters:
   GatewayVpcCidrBlock:
     Type: String

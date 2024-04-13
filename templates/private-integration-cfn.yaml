@@ -5,6 +5,10 @@
 # https://docs.aws.amazon.com/ja_jp/apigateway/latest/developerguide/http-api-private-integration.html
 #
 # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/resources-section-structure.html
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >-
+  Tutorial: Build an HTTP API with a private integration to an Amazon ECS service
+
 Resources:
   # Make VPC
   # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-vpc.html
