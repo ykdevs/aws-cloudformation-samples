@@ -52,8 +52,9 @@ Resources:
     Properties:
       AssumeRolePolicyDocument:
         Statement:
-          - Action: 'sts:AssumeRole'
-            Effect: Allow
+          - Effect: Allow
+            Action:
+              - "sts:AssumeRole"
             Principal:
               Service: ecs-tasks.amazonaws.com
         Version: 2012-10-17
@@ -71,8 +72,9 @@ Resources:
     Properties:
       AssumeRolePolicyDocument:
         Statement:
-          - Action: 'sts:AssumeRole'
-            Effect: Allow
+          - Effect: Allow
+            Action:
+              - "sts:AssumeRole"
             Principal:
               Service: ecs-tasks.amazonaws.com
         Version: 2012-10-17

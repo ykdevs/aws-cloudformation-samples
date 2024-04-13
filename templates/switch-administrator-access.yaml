@@ -18,7 +18,8 @@ Resources:
       AssumeRolePolicyDocument:
         Statement:
           - Effect: Allow
-            Action: "sts:AssumeRole"
+            Action:
+              - "sts:AssumeRole"
             Principal:
               AWS: !Sub "arn:aws:iam::${StepAwsAccountId}:root"
             Condition:

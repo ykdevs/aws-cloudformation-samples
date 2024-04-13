@@ -32,7 +32,6 @@ Parameters:
     Default: main
 Resources:
   # Create S3 Bucket For Artifact
-  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-properties-s3-bucket.html
   SampleS3BucketForPipeline:
     Type: AWS::S3::Bucket
     DeletionPolicy: Delete
@@ -50,14 +49,14 @@ Resources:
     Properties:
       AssumeRolePolicyDocument:
         Statement:
-          - Action: 'sts:AssumeRole'
-            Effect: Allow
+          - Effect: Allow
+            Action:
+             - "sts:AssumeRole"
             Principal:
               Service: codebuild.amazonaws.com
         Version: 2012-10-17
 
   # Create CodeBuildPolicy
-  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-iam-policy.html
   SampleCodeBuildPolicy:
     Type: AWS::IAM::Policy
     Properties:
@@ -65,39 +64,39 @@ Resources:
         Version: "2012-10-17"
         Statement:
           - Effect: Allow
-            Resource:
-              - !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/${ProjectName}'
-              - !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/${ProjectName}:*'
             Action:
-              - logs:CreateLogGroup
-              - logs:CreateLogStream
-              - logs:PutLogEvents
-          - Effect: Allow
+              - "logs:CreateLogGroup"
+              - "logs:CreateLogStream"
+              - "logs:PutLogEvents"
             Resource:
-              - !Sub 'arn:aws:s3:::codepipeline-${AWS::Region}-*'
-            Action:
-              - s3:PutObject
-              - s3:GetObject
-              - s3:GetObjectVersion
-              - s3:GetBucketAcl
-              - s3:GetBucketLocation
+              - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/${ProjectName}"
+              - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/${ProjectName}:*"
           - Effect: Allow
             Action:
-              - ecr:BatchCheckLayerAvailability
-              - ecr:CompleteLayerUpload
-              - ecr:GetAuthorizationToken
-              - ecr:InitiateLayerUpload
-              - ecr:PutImage
-              - ecr:UploadLayerPart
-              - ecs:describeTaskDefinition
+              - "s3:PutObject"
+              - "s3:GetObject"
+              - "s3:GetObjectVersion"
+              - "s3:GetBucketAcl"
+              - "s3:GetBucketLocation"
+            Resource:
+              - !Sub "arn:aws:s3:::codepipeline-${AWS::Region}-*"
+          - Effect: Allow
+            Action:
+              - "ecr:BatchCheckLayerAvailability"
+              - "ecr:CompleteLayerUpload"
+              - "ecr:GetAuthorizationToken"
+              - "ecr:InitiateLayerUpload"
+              - "ecr:PutImage"
+              - "ecr:UploadLayerPart"
+              - "ecs:describeTaskDefinition"
             Resource: "*"
           - Effect: Allow
             Action:
-              - codebuild:CreateReportGroup
-              - codebuild:CreateReport
-              - codebuild:UpdateReport
-              - codebuild:BatchPutTestCases
-              - codebuild:BatchPutCodeCoverages
+              - "codebuild:CreateReportGroup"
+              - "codebuild:CreateReport"
+              - "codebuild:UpdateReport"
+              - "codebuild:BatchPutTestCases"
+              - "codebuild:BatchPutCodeCoverages"
             Resource:
               - !Sub 'arn:aws:codebuild:${AWS::Region}:${AWS::AccountId}:report-group/${ProjectName}-*'
       PolicyName: !Sub "${AWS::StackName}-SampleCodeBuildPolicy"
@@ -105,19 +104,18 @@ Resources:
         - !Ref SampleCodeBuildRole
 
   # Create CodeBuild
-  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-codebuild-project.html
   SampleCodeBuild:
     Type: AWS::CodeBuild::Project
     Properties:
       Name: !Ref ProjectName
       Artifacts:
-        Type: "CODEPIPELINE"
+        Type: CODEPIPELINE
         Name: !Ref ProjectName
         Packaging: NONE
         EncryptionDisabled: false
       BadgeEnabled: false
       Cache:
-        Type: "NO_CACHE"
+        Type: NO_CACHE
       EncryptionKey: !Sub 'arn:aws:kms:${AWS::Region}:${AWS::AccountId}:alias/aws/s3'
       Environment:
         Type: LINUX_CONTAINER
@@ -126,10 +124,10 @@ Resources:
         PrivilegedMode: true
         EnvironmentVariables:
           - Name: AWS_DEFAULT_REGION
-            Value: !Sub '${AWS::Region}'
+            Value: !Sub "${AWS::Region}"
             Type: PLAINTEXT
           - Name: AWS_ACCOUNT_ID
-            Value: !Sub '${AWS::AccountId}'
+            Value: !Sub "${AWS::AccountId}"
             Type: PLAINTEXT
           - Name: IMAGE_TAG
             Value: latest
@@ -144,27 +142,27 @@ Resources:
             Type: PLAINTEXT
       LogsConfig:
         CloudWatchLogs:
-          Status: "ENABLED"
+          Status: ENABLED
         S3Logs:
-          Status: "DISABLED"
+          Status: DISABLED
           EncryptionDisabled: false
       QueuedTimeoutInMinutes: 480
       ServiceRole: !Ref SampleCodeBuildRole
       Source:
-        Type: "CODEPIPELINE"
+        Type: CODEPIPELINE
         InsecureSsl: false
       TimeoutInMinutes: 60
-      Visibility: "PRIVATE"
+      Visibility: PRIVATE
 
   # Make IAM::Role
-  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-iam-role.html
   SampleCodeDeployRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
         Statement:
-          - Action: 'sts:AssumeRole'
-            Effect: Allow
+          - Effect: Allow
+            Action:
+              - "sts:AssumeRole"
             Principal:
               Service: codedeploy.amazonaws.com
         Version: 2012-10-17
@@ -226,8 +224,9 @@ Resources:
     Properties:
       AssumeRolePolicyDocument:
         Statement:
-          - Action: 'sts:AssumeRole'
-            Effect: Allow
+          - Effect: Allow
+            Action:
+              - "sts:AssumeRole"
             Principal:
               Service: codepipeline.amazonaws.com
         Version: 2012-10-17

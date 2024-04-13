@@ -83,14 +83,11 @@ Resources:
   PrivateIntegrationsTutorialVPCPublicSubnet1NATGatewayC5702CC8:
     Type: AWS::EC2::NatGateway
     Properties:
-      AllocationId: !GetAtt 
-        - PrivateIntegrationsTutorialVPCPublicSubnet1EIPD3DAF766
-        - AllocationId
+      AllocationId: !GetAtt PrivateIntegrationsTutorialVPCPublicSubnet1EIPD3DAF766.AllocationId
       SubnetId: !Ref PrivateIntegrationsTutorialVPCPublicSubnet1SubnetBE0B3CBD
       Tags:
         - Key: Name
-          Value: >-
-            PrivateIntegrationsStack/PrivateIntegrationsTutorialVPC/PublicSubnet1
+          Value: "PrivateIntegrationsStack/PrivateIntegrationsTutorialVPC/PublicSubnet1"
   # Make PublicSubnet2
   # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-subnet.html
   PrivateIntegrationsTutorialVPCPublicSubnet2Subnet26685AB7:
@@ -152,14 +149,11 @@ Resources:
   PrivateIntegrationsTutorialVPCPublicSubnet2NATGatewayE6EAEEAB:
     Type: AWS::EC2::NatGateway
     Properties:
-      AllocationId: !GetAtt 
-        - PrivateIntegrationsTutorialVPCPublicSubnet2EIP40226FDB
-        - AllocationId
+      AllocationId: !GetAtt PrivateIntegrationsTutorialVPCPublicSubnet2EIP40226FDB.AllocationId
       SubnetId: !Ref PrivateIntegrationsTutorialVPCPublicSubnet2Subnet26685AB7
       Tags:
         - Key: Name
-          Value: >-
-            PrivateIntegrationsStack/PrivateIntegrationsTutorialVPC/PublicSubnet2
+          Value: "PrivateIntegrationsStack/PrivateIntegrationsTutorialVPC/PublicSubnet2"
   # Make PrivateSubnet1
   # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-subnet.html
   PrivateIntegrationsTutorialVPCPrivateSubnet1SubnetE5CDA06F:
@@ -275,12 +269,10 @@ Resources:
     Properties:
       LoadBalancerAttributes:
         - Key: deletion_protection.enabled
-          Value: 'false'
+          Value: "false"
       Scheme: internal
       SecurityGroups:
-        - !GetAtt 
-          - PrivateIntegrationsTutorialServiceLBSecurityGroup22BA351A
-          - GroupId
+        - !GetAtt PrivateIntegrationsTutorialServiceLBSecurityGroup22BA351A.GroupId
       Subnets:
         - !Ref PrivateIntegrationsTutorialVPCPrivateSubnet1SubnetE5CDA06F
         - !Ref PrivateIntegrationsTutorialVPCPrivateSubnet2SubnetA9278FA5
@@ -305,14 +297,10 @@ Resources:
   PrivateIntegrationsTutorialServiceLBSecurityGrouptoPrivateIntegrationsStackPrivateIntegrationsTutorialServiceSecurityGroupD7C89143805EA68A3C:
     Type: AWS::EC2::SecurityGroupEgress
     Properties:
-      GroupId: !GetAtt 
-        - PrivateIntegrationsTutorialServiceLBSecurityGroup22BA351A
-        - GroupId
+      GroupId: !GetAtt PrivateIntegrationsTutorialServiceLBSecurityGroup22BA351A.GroupId
+      Description: "Load balancer to target"
+      DestinationSecurityGroupId: !GetAtt PrivateIntegrationsTutorialServiceSecurityGroup334FF7AF.GroupId
       IpProtocol: tcp
-      Description: Load balancer to target
-      DestinationSecurityGroupId: !GetAtt 
-        - PrivateIntegrationsTutorialServiceSecurityGroup334FF7AF
-        - GroupId
       FromPort: 80
       ToPort: 80
   # Make Listener
@@ -342,8 +330,9 @@ Resources:
     Properties:
       AssumeRolePolicyDocument:
         Statement:
-          - Action: 'sts:AssumeRole'
-            Effect: Allow
+          - Effect: Allow
+            Action:
+              - "sts:AssumeRole"
             Principal:
               Service: ecs-tasks.amazonaws.com
         Version: 2012-10-17
@@ -365,19 +354,14 @@ Resources:
           PortMappings:
             - ContainerPort: 80
               Protocol: tcp
-      Cpu: '512'
-      ExecutionRoleArn: !GetAtt 
-        - PrivateIntegrationsTutorialServiceTaskDefExecutionRoleC7103AEA
-        - Arn
-      Family: >-
-        PrivateIntegrationsStackPrivateIntegrationsTutorialServiceTaskDefB5E162FC
-      Memory: '2048'
+      Cpu: 512
+      ExecutionRoleArn: !GetAtt PrivateIntegrationsTutorialServiceTaskDefExecutionRoleC7103AEA.Arn
+      Family: "PrivateIntegrationsStackPrivateIntegrationsTutorialServiceTaskDefB5E162FC"
+      Memory: 2048
       NetworkMode: awsvpc
       RequiresCompatibilities:
         - FARGATE
-      TaskRoleArn: !GetAtt 
-        - PrivateIntegrationsTutorialServiceTaskDefTaskRole2B89439A
-        - Arn
+      TaskRoleArn: !GetAtt PrivateIntegrationsTutorialServiceTaskDefTaskRole2B89439A.Arn
   # Make LogGroup
   # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-logs-loggroup.html
   PrivateIntegrationsTutorialServiceTaskDefwebLogGroupBA8BE497:
@@ -391,8 +375,9 @@ Resources:
     Properties:
       AssumeRolePolicyDocument:
         Statement:
-          - Action: 'sts:AssumeRole'
-            Effect: Allow
+          - Effect: Allow
+            Action:
+              - "sts:AssumeRole"
             Principal:
               Service: ecs-tasks.amazonaws.com
         Version: 2012-10-17
@@ -403,16 +388,13 @@ Resources:
     Properties:
       PolicyDocument:
         Statement:
-          - Action:
+          - Effect: Allow
+            Action:
               - "logs:CreateLogStream"
               - "logs:PutLogEvents"
-            Effect: Allow
-            Resource: !GetAtt 
-              - PrivateIntegrationsTutorialServiceTaskDefwebLogGroupBA8BE497
-              - Arn
+            Resource: !GetAtt PrivateIntegrationsTutorialServiceTaskDefwebLogGroupBA8BE497.Arn
         Version: 2012-10-17
-      PolicyName: >-
-        PrivateIntegrationsTutorialServiceTaskDefExecutionRoleDefaultPolicy0F96072D
+      PolicyName: "PrivateIntegrationsTutorialServiceTaskDefExecutionRoleDefaultPolicy0F96072D"
       Roles:
         - !Ref PrivateIntegrationsTutorialServiceTaskDefExecutionRoleC7103AEA
   # Make Service

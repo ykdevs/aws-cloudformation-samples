@@ -71,8 +71,7 @@ Resources:
       MapPublicIpOnLaunch: true
       Tags:
         - Key: Name
-          Value: !Sub
-            - "${AWS::StackName}-PublicSubnet1"
+          Value: !Sub "${AWS::StackName}-PublicSubnet1"
     DependsOn:
       - Vpc
   # Make RouteTable
@@ -82,8 +81,7 @@ Resources:
       VpcId: !Ref Vpc
       Tags:
         - Key: Name
-          Value: !Sub
-            - "${AWS::StackName}-PublicSubnet1"
+          Value: !Sub "${AWS::StackName}-PublicSubnet1"
     DependsOn:
       - Vpc
   # Make RouteTableAssociation
@@ -118,8 +116,7 @@ Resources:
       MapPublicIpOnLaunch: true
       Tags:
         - Key: Name
-          Value: !Sub
-            - "${AWS::StackName}-PublicSubnet2"
+          Value: !Sub "${AWS::StackName}-PublicSubnet2"
     DependsOn:
       - Vpc
   # Make RouteTable
@@ -129,8 +126,7 @@ Resources:
       VpcId: !Ref Vpc
       Tags:
         - Key: Name
-          Value: !Sub
-            - "${AWS::StackName}-PublicSubnet2"
+          Value: !Sub "${AWS::StackName}-PublicSubnet2"
     DependsOn:
       - Vpc
   # Make RouteTableAssociation
@@ -160,20 +156,16 @@ Resources:
       Domain: vpc
       Tags:
         - Key: Name
-          Value: !Sub
-            - "${AWS::StackName}-PublicSubnet1"
+          Value: !Sub "${AWS::StackName}-PublicSubnet1"
   # Make NatGateway
   NatGateway1:
     Type: AWS::EC2::NatGateway
     Properties:
-      AllocationId: !GetAtt
-        - PublicSubnet1Eip
-        - AllocationId
+      AllocationId: !GetAtt PublicSubnet1Eip.AllocationId
       SubnetId: !Ref PublicSubnet1Subnet
       Tags:
         - Key: Name
-          Value: !Sub
-            - "${AWS::StackName}-PublicSubnet1"
+          Value: !Sub "${AWS::StackName}-PublicSubnet1"
 
   # Make PrivateSubnet1
   PrivateSubnet1Subnet:
@@ -187,8 +179,7 @@ Resources:
       MapPublicIpOnLaunch: false
       Tags:
         - Key: Name
-          Value: !Sub
-            - "${AWS::StackName}-PrivateSubnet1"
+          Value: !Sub "${AWS::StackName}-PrivateSubnet1"
   # Make RouteTable
   PrivateSubnet1RouteTable:
     Type: AWS::EC2::RouteTable
@@ -196,8 +187,7 @@ Resources:
       VpcId: !Ref Vpc
       Tags:
         - Key: Name
-          Value: !Sub
-            - "${AWS::StackName}-PrivateSubnet1"
+          Value: !Sub "${AWS::StackName}-PrivateSubnet1"
     DependsOn:
       - Vpc
   # Make RouteTableAssociation
@@ -214,7 +204,7 @@ Resources:
     Type: AWS::EC2::Route
     Properties:
       RouteTableId: !Ref PrivateSubnet1RouteTable
-      DestinationCidrBlock: 0.0.0.0/0
+      DestinationCidrBlock: "0.0.0.0/0"
       NatGatewayId: !Ref NatGateway1
     DependsOn:
       - PrivateSubnet1RouteTable
@@ -227,20 +217,16 @@ Resources:
       Domain: vpc
       Tags:
         - Key: Name
-          Value: !Sub
-            - "${AWS::StackName}-PublicSubnet2"
+          Value: !Sub "${AWS::StackName}-PublicSubnet2"
   # Make NetGateway
   NatGateway2:
     Type: AWS::EC2::NatGateway
     Properties:
-      AllocationId: !GetAtt
-        - PublicSubnet2Eip
-        - AllocationId
+      AllocationId: !GetAtt PublicSubnet2Eip.AllocationId
       SubnetId: !Ref PublicSubnet2Subnet
       Tags:
         - Key: Name
-          Value: !Sub
-            - "${AWS::StackName}-PublicSubnet2"
+          Value: !Sub "${AWS::StackName}-PublicSubnet2"
 
   # Make PrivateSubnet2
   PrivateSubnet2Subnet:
@@ -254,8 +240,7 @@ Resources:
       MapPublicIpOnLaunch: false
       Tags:
         - Key: Name
-          Value: !Sub
-            - "${AWS::StackName}-PrivateSubnet2"
+          Value: !Sub "${AWS::StackName}-PrivateSubnet2"
   # Make RouteTable
   PrivateSubnet2RouteTable:
     Type: AWS::EC2::RouteTable
@@ -263,8 +248,7 @@ Resources:
       VpcId: !Ref Vpc
       Tags:
         - Key: Name
-          Value: !Sub
-            - "${AWS::StackName}-PrivateSubnet2"
+          Value: !Sub "${AWS::StackName}-PrivateSubnet2"
     DependsOn:
       - Vpc
   # Make RouteTableAssociation
@@ -281,7 +265,7 @@ Resources:
     Type: AWS::EC2::Route
     Properties:
       RouteTableId: !Ref PrivateSubnet2RouteTable
-      DestinationCidrBlock: 0.0.0.0/0
+      DestinationCidrBlock: "0.0.0.0/0"
       NatGatewayId: !Ref NatGateway2
     DependsOn:
       - PrivateSubnet2RouteTable

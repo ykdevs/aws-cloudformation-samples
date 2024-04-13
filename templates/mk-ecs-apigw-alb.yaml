@@ -31,13 +31,12 @@ Resources:
   SampleSecurityGroupForAlb:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: >-
-        Automatically created Security Group for SampleAlb
+      GroupDescription: "Automatically created Security Group for SampleAlb"
       SecurityGroupIngress:
-        - CidrIp: 0.0.0.0/0
+        - CidrIp: "0.0.0.0/0"
           Description: !Sub "Allow from anyone on port ${AlbPort}"
-          FromPort: !Ref AlbPort
           IpProtocol: tcp
+          FromPort: !Ref AlbPort
           ToPort: !Ref AlbPort
       VpcId: !ImportValue
         'Fn::Sub': '${NetworkStackName}-SampleVPC'

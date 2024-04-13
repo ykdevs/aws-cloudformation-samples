@@ -52,8 +52,9 @@ Resources:
     Properties:
       AssumeRolePolicyDocument:
         Statement:
-          - Action: 'sts:AssumeRole'
-            Effect: Allow
+          - Effect: Allow
+            Action:
+              - "sts:AssumeRole"
             Principal:
               Service: ecs-tasks.amazonaws.com
         Version: 2012-10-17
@@ -71,8 +72,9 @@ Resources:
     Properties:
       AssumeRolePolicyDocument:
         Statement:
-          - Action: 'sts:AssumeRole'
-            Effect: Allow
+          - Effect: Allow
+            Action:
+              - "sts:AssumeRole"
             Principal:
               Service: ecs-tasks.amazonaws.com
         Version: 2012-10-17
@@ -128,11 +130,10 @@ Resources:
           Environment:
             - Name: SPRING_PROFILES_ACTIVE
               Value: !Sub '${SpringProfilesActive}'
-      Cpu: '512'
+      Cpu: 512
       ExecutionRoleArn: !GetAtt SampleServiceTaskDefExecutionRole.Arn
-      Family: >-
-        SampleServiceTaskDef
-      Memory: '2048'
+      Family: "SampleServiceTaskDef"
+      Memory: 2048
       NetworkMode: awsvpc
       RequiresCompatibilities:
         - FARGATE

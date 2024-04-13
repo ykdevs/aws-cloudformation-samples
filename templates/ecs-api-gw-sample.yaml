@@ -67,8 +67,7 @@ Resources:
       MapPublicIpOnLaunch: true
       Tags:
         - Key: Name
-          Value: >-
-            EcsApigwSample/PublicSubnet1
+          Value: "EcsApigwSample/PublicSubnet1"
     DependsOn:
       - EcsApigwSampleVPC
 
@@ -79,8 +78,7 @@ Resources:
       VpcId: !Ref EcsApigwSampleVPC
       Tags:
         - Key: Name
-          Value: >-
-            EcsApigwSample/PublicSubnet1
+          Value: "EcsApigwSample/PublicSubnet1"
     DependsOn:
       - EcsApigwSampleVPC
 
@@ -99,7 +97,7 @@ Resources:
     Type: AWS::EC2::Route
     Properties:
       RouteTableId: !Ref EcsApigwSampleSubnet1RouteTable
-      DestinationCidrBlock: 0.0.0.0/0
+      DestinationCidrBlock: "0.0.0.0/0"
       GatewayId: !Ref EcsApigwSampleInternetGW
     DependsOn:
       - EcsApigwSampleSubnet1RouteTable
@@ -117,8 +115,7 @@ Resources:
       MapPublicIpOnLaunch: true
       Tags:
         - Key: Name
-          Value: >-
-            EcsApigwSample/PublicSubnet2
+          Value: "EcsApigwSample/PublicSubnet2"
     DependsOn:
       - EcsApigwSampleVPC
 
@@ -129,8 +126,7 @@ Resources:
       VpcId: !Ref EcsApigwSampleVPC
       Tags:
         - Key: Name
-          Value: >-
-            EcsApigwSample/PublicSubnet2
+          Value: "EcsApigwSample/PublicSubnet2"
     DependsOn:
       - EcsApigwSampleVPC
 
@@ -149,7 +145,7 @@ Resources:
     Type: AWS::EC2::Route
     Properties:
       RouteTableId: !Ref EcsApigwSampleSubnet2RouteTable
-      DestinationCidrBlock: 0.0.0.0/0
+      DestinationCidrBlock: "0.0.0.0/0"
       GatewayId: !Ref EcsApigwSampleInternetGW
     DependsOn:
       - EcsApigwSampleSubnet2RouteTable
@@ -160,12 +156,11 @@ Resources:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupName: EcsApigwSample/SecurityGroupForEcs
-      GroupDescription: >-
-        SecurityGroup For ECS
+      GroupDescription: "SecurityGroup For ECS"
       SecurityGroupEgress:
-        - CidrIp: 0.0.0.0/0
-          Description: Allow all outbound traffic by default
-          IpProtocol: '-1'
+        - CidrIp: "0.0.0.0/0"
+          Description: "Allow all outbound traffic by default"
+          IpProtocol: -1
       VpcId: !Ref EcsApigwSampleVPC
       Tags:
         - Key: Name
@@ -179,12 +174,8 @@ Resources:
     Properties:
       IpProtocol: tcp
       Description: Load balancer to target
-      GroupId: !GetAtt
-        - EcsApigwSampleSecurityGroupForEcs
-        - GroupId
-      SourceSecurityGroupId: !GetAtt
-        - EcsApigwSampleSecurityGroupForAlb
-        - GroupId
+      GroupId: !GetAtt EcsApigwSampleSecurityGroupForEcs.GroupId
+      SourceSecurityGroupId: !GetAtt EcsApigwSampleSecurityGroupForAlb.GroupId
       FromPort: !Ref ContainerPort
       ToPort: !Ref ContainerPort
     DependsOn:
@@ -196,13 +187,10 @@ Resources:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupName: EcsApigwSample/SecurityGroupForAlb
-      GroupDescription: >-
-        SecurityGroup For ALB
+      GroupDescription: "SecurityGroup For ALB"
       SecurityGroupIngress:
-        - CidrIp: 0.0.0.0/0
-          Description: !Sub
-            - "Allow from anyone on port ${Port}"
-            - { "Port": !Ref AlbPort }
+        - CidrIp: "0.0.0.0/0"
+          Description: !Sub "Allow from anyone on port ${AlbPort}"
           IpProtocol: tcp
           FromPort: !Ref AlbPort
           ToPort: !Ref AlbPort
@@ -217,14 +205,10 @@ Resources:
   EcsApigwSampleSecurityGroupEgressForAlb:
     Type: AWS::EC2::SecurityGroupEgress
     Properties:
-      GroupId: !GetAtt
-        - EcsApigwSampleSecurityGroupForAlb
-        - GroupId
+      GroupId: !GetAtt EcsApigwSampleSecurityGroupForAlb.GroupId
       IpProtocol: tcp
-      Description: Load balancer to target
-      DestinationSecurityGroupId: !GetAtt
-        - EcsApigwSampleSecurityGroupForEcs
-        - GroupId
+      Description: "Load balancer to target"
+      DestinationSecurityGroupId: !GetAtt EcsApigwSampleSecurityGroupForEcs.GroupId
       FromPort: !Ref ContainerPort
       ToPort: !Ref ContainerPort
     DependsOn:
@@ -240,9 +224,7 @@ Resources:
           Value: 'false'
       Scheme: internal
       SecurityGroups:
-        - !GetAtt
-          - EcsApigwSampleSecurityGroupForAlb
-          - GroupId
+        - !GetAtt EcsApigwSampleSecurityGroupForAlb.GroupId
       Subnets:
         - !Ref EcsApigwSampleSubnet1Subnet
         - !Ref EcsApigwSampleSubnet2Subnet
@@ -289,8 +271,9 @@ Resources:
     Properties:
       AssumeRolePolicyDocument:
         Statement:
-          - Action: 'sts:AssumeRole'
-            Effect: Allow
+          - Effect: Allow
+            Action:
+              - "sts:AssumeRole"
             Principal:
               Service: ecs-tasks.amazonaws.com
         Version: 2012-10-17
@@ -301,24 +284,21 @@ Resources:
     Properties:
       PolicyDocument:
         Statement:
-          - Action:
+          - Effect: Allow
+            Action:
               - "logs:CreateLogStream"
               - "logs:PutLogEvents"
-            Effect: Allow
-            Resource: !GetAtt
-              - EcsApigwSampleServiceTaskDefLogGroup
-              - Arn
-          - Action:
+            Resource: !GetAtt EcsApigwSampleServiceTaskDefLogGroup.Arn
+          - Effect: Allow
+            Action:
               - "ecr:BatchGetImage"
               - "ecr:GetAuthorizationToken"
               - "ecr:GetDownloadUrlForLayer"
               - "ecr:DescribeRepositories"
               - "ecr:DescribeImage"
             Resource: "*"
-            Effect: Allow
         Version: 2012-10-17
-      PolicyName: >-
-        EcsApigwSampleServiceTaskDefExecutionRoleDefaultPolicy
+      PolicyName: "EcsApigwSampleServiceTaskDefExecutionRoleDefaultPolicy"
       Roles:
         - !Ref EcsApigwSampleServiceTaskExecutionRole
     DependsOn:
@@ -340,8 +320,9 @@ Resources:
     Properties:
       AssumeRolePolicyDocument:
         Statement:
-          - Action: 'sts:AssumeRole'
-            Effect: Allow
+          - Effect: Allow
+            Action:
+              - "sts:AssumeRole"
             Principal:
               Service: ecs-tasks.amazonaws.com
         Version: 2012-10-17
@@ -352,9 +333,7 @@ Resources:
     Properties:
       ContainerDefinitions:
         - Essential: true
-          Image: !Sub
-            - "${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${ImageName}"
-            - { ImageName: !Ref EcrImageName }
+          Image: !Sub "${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${EcrImageName}"
           LogConfiguration:
             LogDriver: awslogs
             Options:
@@ -365,19 +344,14 @@ Resources:
           PortMappings:
             - ContainerPort: !Ref ContainerPort
               Protocol: tcp
-      Cpu: '512'
-      ExecutionRoleArn: !GetAtt
-        - EcsApigwSampleServiceTaskExecutionRole
-        - Arn
-      Family: >-
-        EcsApigwSampleServiceTaskDef
-      Memory: '2048'
+      Cpu: 512
+      ExecutionRoleArn: !GetAtt EcsApigwSampleServiceTaskExecutionRole.Arn
+      Family: "EcsApigwSampleServiceTaskDef"
+      Memory: 2048
       NetworkMode: awsvpc
       RequiresCompatibilities:
         - FARGATE
-      TaskRoleArn: !GetAtt
-        - EcsApigwSampleServiceTaskDefTaskRole
-        - Arn
+      TaskRoleArn: !GetAtt EcsApigwSampleServiceTaskDefTaskRole.Arn
     DependsOn:
       - EcsApigwSampleCluster
       - EcsApigwSampleServiceTaskDefLogGroup
@@ -404,9 +378,7 @@ Resources:
         AwsvpcConfiguration:
           AssignPublicIp: ENABLED
           SecurityGroups:
-            - !GetAtt
-              - EcsApigwSampleSecurityGroupForEcs
-              - GroupId
+            - !GetAtt EcsApigwSampleSecurityGroupForEcs.GroupId
           Subnets:
             - !Ref EcsApigwSampleSubnet1Subnet
             - !Ref EcsApigwSampleSubnet2Subnet
@@ -420,11 +392,10 @@ Resources:
       - EcsApigwSampleServiceTaskDef
 
   # Make VPC Link
-  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-apigatewayv2-vpclink.html
   EcsApigwSampleVpcLink:
     Type: AWS::ApiGatewayV2::VpcLink
     Properties:
-      Name: 'EcsApigwSampleVpcLink'
+      Name: "EcsApigwSampleVpcLink"
       SubnetIds:
         - !Ref EcsApigwSampleSubnet1Subnet
         - !Ref EcsApigwSampleSubnet2Subnet
@@ -433,35 +404,32 @@ Resources:
       - EcsApigwSampleSubnet2Subnet
 
   # Make Api
-  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-apigatewayv2-vpclink.html
   EcsApigwSampleApi:
     Type: AWS::ApiGatewayV2::Api
     Properties:
-      Name: 'EcsApigwSampleApi'
-      Description: 'EcsApigwSample/ApiGateway'
+      Name: "EcsApigwSampleApi"
+      Description: "EcsApigwSample/ApiGateway"
       ProtocolType: HTTP
 
   # Make Api Stage
-  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-apigatewayv2-stage.html
   EcsApigwSampleApiStage:
     Type: AWS::ApiGatewayV2::Stage
     Properties:
-      StageName: '$default'
+      StageName: "$default"
       ApiId: !Ref EcsApigwSampleApi
     DependsOn:
       - EcsApigwSampleApi
 
   # Make Api Integration
-  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-apigatewayv2-integration.html
   EcsApigwSampleApiIntegration:
     Type: AWS::ApiGatewayV2::Integration
     Properties:
       ApiId: !Ref EcsApigwSampleApi
       ConnectionId: !Ref EcsApigwSampleVpcLink
-      ConnectionType: 'VPC_LINK'
-      Description: 'EcsApigwSampleApiIntegration'
-      IntegrationMethod: 'ANY'
-      IntegrationType: 'HTTP_PROXY'
+      ConnectionType: VPC_LINK
+      Description: "EcsApigwSampleApiIntegration"
+      IntegrationMethod: ANY
+      IntegrationType: HTTP_PROXY
       IntegrationUri: !Ref EcsApigwSampleAlbListener
       PayloadFormatVersion: 1.0
     DependsOn:
@@ -470,40 +438,29 @@ Resources:
       - EcsApigwSampleAlbListener
 
   # Make Api Route
-  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-apigatewayv2-route.html
   EcsApigwSampleApiRoute:
     Type: AWS::ApiGatewayV2::Route
     Properties:
       ApiId: !Ref EcsApigwSampleApi
-      RouteKey: 'ANY /{proxy+}'
-      Target: !Sub
-        - "integrations/${IntegrationId}"
-        - { IntegrationId: !Ref EcsApigwSampleApiIntegration }
+      RouteKey: "ANY /{proxy+}"
+      Target: !Sub "integrations/${EcsApigwSampleApiIntegration}"
     DependsOn:
       - EcsApigwSampleApi
       - EcsApigwSampleApiIntegration
 
   # Make Api Deployment
-  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-apigatewayv2-deployment.html
   EcsApigwSampleApiDeployment:
     Type: AWS::ApiGatewayV2::Deployment
     Properties:
       ApiId: !Ref EcsApigwSampleApi
-      Description: 'EcsApigwSampleApiDeployment'
-      StageName: '$default'
+      Description: "EcsApigwSampleApiDeployment"
+      StageName: "$default"
     DeletionPolicy: Retain
     DependsOn:
       - EcsApigwSampleApi
       - EcsApigwSampleApiRoute
 
 # Outputs
-# https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/outputs-section-structure.html
 Outputs:
   EcsApigwSampleExternalURL:
-    Value: !Join
-      - ''
-      - - "https://"
-        - !Ref EcsApigwSampleApi
-        - ".execute-api."
-        - !Ref 'AWS::Region'
-        - ".amazonaws.com"
+    Value: !Sub "https://${EcsApigwSampleApi}.execute-api.${AWS::Region}.amazonaws.com"

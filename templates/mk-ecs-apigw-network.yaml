@@ -96,13 +96,11 @@ Resources:
   SampleVPCPublicSubnet1NATGateway:
     Type: AWS::EC2::NatGateway
     Properties:
-      AllocationId: !GetAtt
-        - SampleVPCPublicSubnet1EIP
-        - AllocationId
+      AllocationId: !GetAtt SampleVPCPublicSubnet1EIP.AllocationId
       SubnetId: !Ref SampleVPCPublicSubnet1Subnet
       Tags:
         - Key: Name
-          Value: SampleVPC/PublicSubnet1
+          Value: "SampleVPC/PublicSubnet1"
 
   # Make PublicSubnet2
   # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-subnet.html
@@ -158,13 +156,11 @@ Resources:
   SampleVPCPublicSubnet2NATGateway:
     Type: AWS::EC2::NatGateway
     Properties:
-      AllocationId: !GetAtt
-        - SampleVPCPublicSubnet2EIP
-        - AllocationId
+      AllocationId: !GetAtt SampleVPCPublicSubnet2EIP.AllocationId
       SubnetId: !Ref SampleVPCPublicSubnet2Subnet
       Tags:
         - Key: Name
-          Value: SampleVPC/PublicSubnet2
+          Value: "SampleVPC/PublicSubnet2"
 
   # Make PrivateSubnet1
   # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-subnet.html
