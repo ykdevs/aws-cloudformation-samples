@@ -1,7 +1,11 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >-
+  Make SecurityGroup Environment
+
 Resources:
   # Make VPC
   CreateSecurityGroupVPC:
-    Type: 'AWS::EC2::VPC'
+    Type: AWS::EC2::VPC
     Properties:
       CidrBlock: 10.0.0.0/16
       EnableDnsHostnames: true
@@ -13,7 +17,7 @@ Resources:
 
   # Make SecurityGroup
   CreateSecurityGroupSecurityGroup1:
-    Type: 'AWS::EC2::SecurityGroup'
+    Type: AWS::EC2::SecurityGroup
     Properties:
       GroupName: CreateSecurityGroup/SecurityGroup1
       GroupDescription: >-
@@ -24,9 +28,9 @@ Resources:
           ToPort: 80
           CidrIp: 0.0.0.0/0
       SecurityGroupEgress:
-        - CidrIp: 0.0.0.0/0
-          Description: Allow all outbound traffic by default
-          IpProtocol: '-1'
+        - CidrIp: "0.0.0.0/0"
+          Description: "Allow all outbound traffic by default"
+          IpProtocol: -1
       VpcId: !Ref CreateSecurityGroupVPC
       Tags:
         - Key: Name

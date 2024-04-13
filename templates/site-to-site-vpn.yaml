@@ -108,7 +108,7 @@ Resources:
         Statement:
           - Effect: Allow
             Resource:
-              - '*'
+              - "*"
             Action:
               - s3:*
               - ssm:GetParameters

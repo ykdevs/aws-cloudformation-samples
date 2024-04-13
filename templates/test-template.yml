@@ -13,7 +13,7 @@ Parameters:
 Resources:
   # Create CoeBuildRole
   SampleCodeDeployRole:
-    Type: 'AWS::IAM::Role'
+    Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
         Statement:
@@ -26,7 +26,7 @@ Resources:
   # Create CodeBuildPolicy
   # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-iam-policy.html
   SampleCodeBuildPolicy:
-    Type: 'AWS::IAM::Policy'
+    Type: AWS::IAM::Policy
     Properties:
       PolicyDocument:
         Version: "2012-10-17"
@@ -57,7 +57,7 @@ Resources:
               - ecr:PutImage
               - ecr:UploadLayerPart
               - ecs:describeTaskDefinition
-            Resource: '*'
+            Resource: "*"
           - Effect: Allow
             Action:
               - codebuild:CreateReportGroup
@@ -119,7 +119,7 @@ Resources:
 
   # Create CoePipelineRole
   SampleCodePipelineRole:
-    Type: 'AWS::IAM::Role'
+    Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
         Statement:
@@ -132,14 +132,14 @@ Resources:
   # Create CodePipelinePolicy
   # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-iam-policy.html
   SampleCodePipelinePolicy:
-    Type: 'AWS::IAM::Policy'
+    Type: AWS::IAM::Policy
     Properties:
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
           - Action:
               - iam:PassRole
-            Resource: '*'
+            Resource: "*"
             Effect: Allow
             Condition:
               StringEqualsIfExists:
@@ -155,7 +155,7 @@ Resources:
               - codecommit:GetRepository
               - codecommit:GetUploadArchiveStatus
               - codecommit:UploadArchive
-            Resource: '*'
+            Resource: "*"
             Effect: Allow
           - Action:
               - codedeploy:CreateDeployment
@@ -164,11 +164,11 @@ Resources:
               - codedeploy:GetDeployment
               - codedeploy:GetDeploymentConfig
               - codedeploy:RegisterApplicationRevision
-            Resource: '*'
+            Resource: "*"
             Effect: Allow
           - Action:
               - codestar-connections:UseConnection
-            Resource: '*'
+            Resource: "*"
             Effect: Allow
           - Action:
               - elasticbeanstalk:*
@@ -182,12 +182,12 @@ Resources:
               - rds:*
               - sqs:*
               - ecs:*
-            Resource: '*'
+            Resource: "*"
             Effect: Allow
           - Action:
               - lambda:InvokeFunction
               - lambda:ListFunctions
-            Resource: '*'
+            Resource: "*"
             Effect: Allow
           - Action:
               - opsworks:CreateDeployment
@@ -198,7 +198,7 @@ Resources:
               - opsworks:DescribeStacks
               - opsworks:UpdateApp
               - opsworks:UpdateStack
-            Resource: '*'
+            Resource: "*"
             Effect: Allow
           - Action:
               - cloudformation:CreateStack
@@ -211,14 +211,14 @@ Resources:
               - cloudformation:ExecuteChangeSet
               - cloudformation:SetStackPolicy
               - cloudformation:ValidateTemplate
-            Resource: '*'
+            Resource: "*"
             Effect: Allow
           - Action:
               - codebuild:BatchGetBuilds
               - codebuild:StartBuild
               - codebuild:BatchGetBuildBatches
               - codebuild:StartBuildBatch
-            Resource: '*'
+            Resource: "*"
             Effect: Allow
           - Effect: Allow
             Action:
@@ -228,7 +228,7 @@ Resources:
               - devicefarm:GetUpload
               - devicefarm:CreateUpload
               - devicefarm:ScheduleRun
-            Resource: '*'
+            Resource: "*"
           - Effect: Allow
             Action:
               - servicecatalog:ListProvisioningArtifacts
@@ -236,27 +236,27 @@ Resources:
               - servicecatalog:DescribeProvisioningArtifact
               - servicecatalog:DeleteProvisioningArtifact
               - servicecatalog:UpdateProduct
-            Resource: '*'
+            Resource: "*"
           - Effect: Allow
             Action:
               - cloudformation:ValidateTemplate
-            Resource: '*'
+            Resource: "*"
           - Effect: Allow
             Action:
               - ecr:DescribeImages
-            Resource: '*'
+            Resource: "*"
           - Effect: Allow
             Action:
               - states:DescribeExecution
               - states:DescribeStateMachine
               - states:StartExecution
-            Resource: '*'
+            Resource: "*"
           - Effect: Allow
             Action:
               - appconfig:StartDeployment
               - appconfig:StopDeployment
               - appconfig:GetDeployment
-            Resource: '*'
+            Resource: "*"
       PolicyName: !Sub "${AWS::StackName}-SampleCodePipelineRole"
       Roles:
         - !Ref SampleCodePipelineRole

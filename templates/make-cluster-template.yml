@@ -107,7 +107,7 @@ Resources:
         - UseSpecifiedVpcAvailabilityZones
         - !Select ['0', !Ref 'VpcAvailabilityZones']
         - !Select
-          - '0'
+          - "0"
           - Fn::GetAZs:
               !Ref AWS::Region
       Tags:
@@ -127,7 +127,7 @@ Resources:
         - UseSpecifiedVpcAvailabilityZones
         - !Select ['1', !Ref 'VpcAvailabilityZones']
         - !Select
-          - '1'
+          - "1"
           - Fn::GetAZs:
               !Ref AWS::Region
       Tags:
@@ -304,12 +304,12 @@ Resources:
                 #!/bin/bash
               - echo ECS_CLUSTER=
               - !Ref EcsClusterName
-              - ' >> /etc/ecs/ecs.config'
+              - " >> /etc/ecs/ecs.config"
               - |-
 
                 echo ECS_BACKEND_HOST=
               - !Ref EcsEndpoint
-              - ' >> /etc/ecs/ecs.config'
+              - " >> /etc/ecs/ecs.config"
         - !Base64
           'Fn::Join':
             - ''
@@ -317,7 +317,7 @@ Resources:
                 #!/bin/bash
               - echo ECS_CLUSTER=
               - !Ref EcsClusterName
-              - ' >> /etc/ecs/ecs.config'
+              - " >> /etc/ecs/ecs.config"
   # Make AutoScalingGroup
   # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-properties-as-group.html
   EcsInstanceAsg:

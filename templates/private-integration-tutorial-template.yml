@@ -6,7 +6,7 @@ Resources:
   # Make VPC
   # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-vpc.html
   PrivateIntegrationsTutorialVPCD20D58E8:
-    Type: 'AWS::EC2::VPC'
+    Type: AWS::EC2::VPC
     Properties:
       CidrBlock: 10.0.0.0/16
       EnableDnsHostnames: true
@@ -18,7 +18,7 @@ Resources:
   # Make PublicSubnet1
   # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-subnet.html
   PrivateIntegrationsTutorialVPCPublicSubnet1SubnetBE0B3CBD:
-    Type: 'AWS::EC2::Subnet'
+    Type: AWS::EC2::Subnet
     Properties:
       CidrBlock: 10.0.0.0/18
       VpcId: !Ref PrivateIntegrationsTutorialVPCD20D58E8
@@ -37,7 +37,7 @@ Resources:
   # Make RouteTable
   # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-routetable.html
   PrivateIntegrationsTutorialVPCPublicSubnet1RouteTableA63763CC:
-    Type: 'AWS::EC2::RouteTable'
+    Type: AWS::EC2::RouteTable
     Properties:
       VpcId: !Ref PrivateIntegrationsTutorialVPCD20D58E8
       Tags:
@@ -47,14 +47,14 @@ Resources:
   # Make RouteTableAssociation
   # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-subnet-network-acl-assoc.html
   PrivateIntegrationsTutorialVPCPublicSubnet1RouteTableAssociationFD6DF484:
-    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       RouteTableId: !Ref PrivateIntegrationsTutorialVPCPublicSubnet1RouteTableA63763CC
       SubnetId: !Ref PrivateIntegrationsTutorialVPCPublicSubnet1SubnetBE0B3CBD
   # Make Route
   # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-route.html
   PrivateIntegrationsTutorialVPCPublicSubnet1DefaultRouteD59FC1D2:
-    Type: 'AWS::EC2::Route'
+    Type: AWS::EC2::Route
     Properties:
       RouteTableId: !Ref PrivateIntegrationsTutorialVPCPublicSubnet1RouteTableA63763CC
       DestinationCidrBlock: 0.0.0.0/0
@@ -64,7 +64,7 @@ Resources:
   # Make EIP
   # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-eip.html
   PrivateIntegrationsTutorialVPCPublicSubnet1EIPD3DAF766:
-    Type: 'AWS::EC2::EIP'
+    Type: AWS::EC2::EIP
     Properties:
       Domain: vpc
       Tags:
@@ -74,7 +74,7 @@ Resources:
   # Make NetGateway
   # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-natgateway.html
   PrivateIntegrationsTutorialVPCPublicSubnet1NATGatewayC5702CC8:
-    Type: 'AWS::EC2::NatGateway'
+    Type: AWS::EC2::NatGateway
     Properties:
       AllocationId: !GetAtt
         - PrivateIntegrationsTutorialVPCPublicSubnet1EIPD3DAF766
@@ -86,7 +86,7 @@ Resources:
             PrivateIntegrationsStack/PrivateIntegrationsTutorialVPC/PublicSubnet1
   # Make Subnet2
   PrivateIntegrationsTutorialVPCPublicSubnet2Subnet26685AB7:
-    Type: 'AWS::EC2::Subnet'
+    Type: AWS::EC2::Subnet
     Properties:
       CidrBlock: 10.0.64.0/18
       VpcId: !Ref PrivateIntegrationsTutorialVPCD20D58E8
@@ -104,7 +104,7 @@ Resources:
             PrivateIntegrationsStack/PrivateIntegrationsTutorialVPC/PublicSubnet2
   # Make RouteTable
   PrivateIntegrationsTutorialVPCPublicSubnet2RouteTable356B306D:
-    Type: 'AWS::EC2::RouteTable'
+    Type: AWS::EC2::RouteTable
     Properties:
       VpcId: !Ref PrivateIntegrationsTutorialVPCD20D58E8
       Tags:
@@ -113,13 +113,13 @@ Resources:
             PrivateIntegrationsStack/PrivateIntegrationsTutorialVPC/PublicSubnet2
   # Make RouteTableAssociation
   PrivateIntegrationsTutorialVPCPublicSubnet2RouteTableAssociation1035F5D0:
-    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       RouteTableId: !Ref PrivateIntegrationsTutorialVPCPublicSubnet2RouteTable356B306D
       SubnetId: !Ref PrivateIntegrationsTutorialVPCPublicSubnet2Subnet26685AB7
   # Make Route
   PrivateIntegrationsTutorialVPCPublicSubnet2DefaultRoute4AB2237D:
-    Type: 'AWS::EC2::Route'
+    Type: AWS::EC2::Route
     Properties:
       RouteTableId: !Ref PrivateIntegrationsTutorialVPCPublicSubnet2RouteTable356B306D
       DestinationCidrBlock: 0.0.0.0/0
@@ -128,7 +128,7 @@ Resources:
       - PrivateIntegrationsTutorialVPCVPCGW514A8E2A
   #  Make EIP
   PrivateIntegrationsTutorialVPCPublicSubnet2EIP40226FDB:
-    Type: 'AWS::EC2::EIP'
+    Type: AWS::EC2::EIP
     Properties:
       Domain: vpc
       Tags:
@@ -137,7 +137,7 @@ Resources:
             PrivateIntegrationsStack/PrivateIntegrationsTutorialVPC/PublicSubnet2
   # Make NetGateway
   PrivateIntegrationsTutorialVPCPublicSubnet2NATGatewayE6EAEEAB:
-    Type: 'AWS::EC2::NatGateway'
+    Type: AWS::EC2::NatGateway
     Properties:
       AllocationId: !GetAtt
         - PrivateIntegrationsTutorialVPCPublicSubnet2EIP40226FDB
@@ -149,7 +149,7 @@ Resources:
             PrivateIntegrationsStack/PrivateIntegrationsTutorialVPC/PublicSubnet2
   # Make Subnet3
   PrivateIntegrationsTutorialVPCPrivateSubnet1SubnetE5CDA06F:
-    Type: 'AWS::EC2::Subnet'
+    Type: AWS::EC2::Subnet
     Properties:
       CidrBlock: 10.0.128.0/18
       VpcId: !Ref PrivateIntegrationsTutorialVPCD20D58E8
@@ -167,7 +167,7 @@ Resources:
             PrivateIntegrationsStack/PrivateIntegrationsTutorialVPC/PrivateSubnet1
   # Make RouteTable
   PrivateIntegrationsTutorialVPCPrivateSubnet1RouteTable2DE71EA5:
-    Type: 'AWS::EC2::RouteTable'
+    Type: AWS::EC2::RouteTable
     Properties:
       VpcId: !Ref PrivateIntegrationsTutorialVPCD20D58E8
       Tags:
@@ -176,20 +176,20 @@ Resources:
             PrivateIntegrationsStack/PrivateIntegrationsTutorialVPC/PrivateSubnet1
   # Make RouteTableAssociation
   PrivateIntegrationsTutorialVPCPrivateSubnet1RouteTableAssociation0CFE385A:
-    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       RouteTableId: !Ref PrivateIntegrationsTutorialVPCPrivateSubnet1RouteTable2DE71EA5
       SubnetId: !Ref PrivateIntegrationsTutorialVPCPrivateSubnet1SubnetE5CDA06F
   # Make Route
   PrivateIntegrationsTutorialVPCPrivateSubnet1DefaultRouteAAEB83F7:
-    Type: 'AWS::EC2::Route'
+    Type: AWS::EC2::Route
     Properties:
       RouteTableId: !Ref PrivateIntegrationsTutorialVPCPrivateSubnet1RouteTable2DE71EA5
       DestinationCidrBlock: 0.0.0.0/0
       NatGatewayId: !Ref PrivateIntegrationsTutorialVPCPublicSubnet1NATGatewayC5702CC8
   # Make Private Subnet
   PrivateIntegrationsTutorialVPCPrivateSubnet2SubnetA9278FA5:
-    Type: 'AWS::EC2::Subnet'
+    Type: AWS::EC2::Subnet
     Properties:
       CidrBlock: 10.0.192.0/18
       VpcId: !Ref PrivateIntegrationsTutorialVPCD20D58E8
@@ -207,7 +207,7 @@ Resources:
             PrivateIntegrationsStack/PrivateIntegrationsTutorialVPC/PrivateSubnet2
   # Make RouteTable
   PrivateIntegrationsTutorialVPCPrivateSubnet2RouteTable6E1CF234:
-    Type: 'AWS::EC2::RouteTable'
+    Type: AWS::EC2::RouteTable
     Properties:
       VpcId: !Ref PrivateIntegrationsTutorialVPCD20D58E8
       Tags:
@@ -216,13 +216,13 @@ Resources:
             PrivateIntegrationsStack/PrivateIntegrationsTutorialVPC/PrivateSubnet2
   # Make SubnetRouteTableAssociation
   PrivateIntegrationsTutorialVPCPrivateSubnet2RouteTableAssociation7F682A6E:
-    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       RouteTableId: !Ref PrivateIntegrationsTutorialVPCPrivateSubnet2RouteTable6E1CF234
       SubnetId: !Ref PrivateIntegrationsTutorialVPCPrivateSubnet2SubnetA9278FA5
   # Make Route
   PrivateIntegrationsTutorialVPCPrivateSubnet2DefaultRoute012406AE:
-    Type: 'AWS::EC2::Route'
+    Type: AWS::EC2::Route
     Properties:
       RouteTableId: !Ref PrivateIntegrationsTutorialVPCPrivateSubnet2RouteTable6E1CF234
       DestinationCidrBlock: 0.0.0.0/0
@@ -230,7 +230,7 @@ Resources:
   # Make InternetGateway
   # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-internetgateway.html
   PrivateIntegrationsTutorialVPCIGW3645F9D4:
-    Type: 'AWS::EC2::InternetGateway'
+    Type: AWS::EC2::InternetGateway
     Properties:
       Tags:
         - Key: Name
@@ -238,7 +238,7 @@ Resources:
   # Make VPCGatewayAttachment
   # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-vpc-gateway-attachment.html
   PrivateIntegrationsTutorialVPCVPCGW514A8E2A:
-    Type: 'AWS::EC2::VPCGatewayAttachment'
+    Type: AWS::EC2::VPCGatewayAttachment
     Properties:
       VpcId: !Ref PrivateIntegrationsTutorialVPCD20D58E8
       InternetGatewayId: !Ref PrivateIntegrationsTutorialVPCIGW3645F9D4
@@ -246,11 +246,11 @@ Resources:
   # Make Cluster
   # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ecs-cluster.html
   PrivateIntegrationsTutorialCluster09C95435:
-    Type: 'AWS::ECS::Cluster'
+    Type: AWS::ECS::Cluster
   # Make LoadBalancer
   # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-elasticloadbalancingv2-loadbalancer.html
   PrivateIntegrationsTutorialServiceLB8E9ECEA5:
-    Type: 'AWS::ElasticLoadBalancingV2::LoadBalancer'
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
       LoadBalancerAttributes:
         - Key: deletion_protection.enabled
@@ -267,7 +267,7 @@ Resources:
   # Make SecurityGroup
   # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-security-group.html
   PrivateIntegrationsTutorialServiceLBSecurityGroup22BA351A:
-    Type: 'AWS::EC2::SecurityGroup'
+    Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: >-
         Automatically created Security Group for ELB
@@ -282,7 +282,7 @@ Resources:
   # Make SecurityGroupEgress
   # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-security-group-egress.html
   PrivateIntegrationsTutorialServiceLBSecurityGrouptoPrivateIntegrationsStackPrivateIntegrationsTutorialServiceSecurityGroupD7C89143805EA68A3C:
-    Type: 'AWS::EC2::SecurityGroupEgress'
+    Type: AWS::EC2::SecurityGroupEgress
     Properties:
       GroupId: !GetAtt
         - PrivateIntegrationsTutorialServiceLBSecurityGroup22BA351A
@@ -297,7 +297,7 @@ Resources:
   # Make Listener
   # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-elasticloadbalancingv2-listener.html
   PrivateIntegrationsTutorialServiceLBPublicListener2554FECD:
-    Type: 'AWS::ElasticLoadBalancingV2::Listener'
+    Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
       DefaultActions:
         - TargetGroupArn: !Ref PrivateIntegrationsTutorialServiceLBPublicListenerECSGroup0E6605DB
@@ -308,7 +308,7 @@ Resources:
   # Make TargetGroup
   # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-properties-elasticloadbalancingv2-listener-targetgrouptuple.html
   PrivateIntegrationsTutorialServiceLBPublicListenerECSGroup0E6605DB:
-    Type: 'AWS::ElasticLoadBalancingV2::TargetGroup'
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
       Port: 80
       Protocol: HTTP
@@ -317,7 +317,7 @@ Resources:
   # Make IAM::Role
   # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-iam-role.html
   PrivateIntegrationsTutorialServiceTaskDefTaskRole2B89439A:
-    Type: 'AWS::IAM::Role'
+    Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
         Statement:
@@ -329,7 +329,7 @@ Resources:
   # Make TaskDefinition
   # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ecs-taskdefinition.html
   PrivateIntegrationsTutorialServiceTaskDef914930A0:
-    Type: 'AWS::ECS::TaskDefinition'
+    Type: AWS::ECS::TaskDefinition
     Properties:
       ContainerDefinitions:
         - Essential: true
@@ -360,12 +360,12 @@ Resources:
   # Make LogGroup
   # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-logs-loggroup.html
   PrivateIntegrationsTutorialServiceTaskDefwebLogGroupBA8BE497:
-    Type: 'AWS::Logs::LogGroup'
+    Type: AWS::Logs::LogGroup
     UpdateReplacePolicy: Retain
     DeletionPolicy: Retain
   # Make IAM Role
   PrivateIntegrationsTutorialServiceTaskDefExecutionRoleC7103AEA:
-    Type: 'AWS::IAM::Role'
+    Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
         Statement:
@@ -377,13 +377,13 @@ Resources:
   # Make IAM Policy
   # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-iam-policy.html
   PrivateIntegrationsTutorialServiceTaskDefExecutionRoleDefaultPolicy0F96072D:
-    Type: 'AWS::IAM::Policy'
+    Type: AWS::IAM::Policy
     Properties:
       PolicyDocument:
         Statement:
           - Action:
-              - 'logs:CreateLogStream'
-              - 'logs:PutLogEvents'
+              - "logs:CreateLogStream"
+              - "logs:PutLogEvents"
             Effect: Allow
             Resource: !GetAtt
               - PrivateIntegrationsTutorialServiceTaskDefwebLogGroupBA8BE497
@@ -396,7 +396,7 @@ Resources:
   # Make Service
   # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ecs-service.html
   PrivateIntegrationsTutorialService73010F72:
-    Type: 'AWS::ECS::Service'
+    Type: AWS::ECS::Service
     Properties:
       Cluster: !Ref PrivateIntegrationsTutorialCluster09C95435
       DeploymentConfiguration:
@@ -426,7 +426,7 @@ Resources:
       - PrivateIntegrationsTutorialServiceLBPublicListener2554FECD
   # Make SecurityGroup
   PrivateIntegrationsTutorialServiceSecurityGroup334FF7AF:
-    Type: 'AWS::EC2::SecurityGroup'
+    Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: >-
         PrivateIntegrationsStack/PrivateIntegrationsTutorialService/Service/SecurityGroup
@@ -438,7 +438,7 @@ Resources:
   # Make SecurityGroupIngress
   # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-security-group-ingress.html
   PrivateIntegrationsTutorialServiceSecurityGroupfromPrivateIntegrationsStackPrivateIntegrationsTutorialServiceLBSecurityGroup37A9AEF980935D99E0:
-    Type: 'AWS::EC2::SecurityGroupIngress'
+    Type: AWS::EC2::SecurityGroupIngress
     Properties:
       IpProtocol: tcp
       Description: Load balancer to target
@@ -459,7 +459,7 @@ Outputs:
   PrivateIntegrationsTutorialServiceServiceURLB6E59CA2:
     Value: !Join
       - ''
-      - - 'http://'
+      - - "http://"
         - !GetAtt
           - PrivateIntegrationsTutorialServiceLB8E9ECEA5
           - DNSName

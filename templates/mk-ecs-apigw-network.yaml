@@ -29,7 +29,7 @@ Resources:
   # Make VPC
   # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-vpc.html
   SampleVPC:
-    Type: 'AWS::EC2::VPC'
+    Type: AWS::EC2::VPC
     Properties:
       CidrBlock: !Ref VpcCidrBlock
       EnableDnsHostnames: true
@@ -41,7 +41,7 @@ Resources:
   # Make PublicSubnet1
   # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-subnet.html
   SampleVPCPublicSubnet1Subnet:
-    Type: 'AWS::EC2::Subnet'
+    Type: AWS::EC2::Subnet
     Properties:
       CidrBlock: !Ref PublicSubnet1CidrBlock
       VpcId: !Ref SampleVPC
@@ -55,7 +55,7 @@ Resources:
   # Make RouteTable
   # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-routetable.html
   SampleVPCPublicSubnet1RouteTable:
-    Type: 'AWS::EC2::RouteTable'
+    Type: AWS::EC2::RouteTable
     Properties:
       VpcId: !Ref SampleVPC
       Tags:
@@ -64,14 +64,14 @@ Resources:
   # Make RouteTableAssociation
   # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-subnet-network-acl-assoc.html
   SampleVPCPublicSubnet1RouteTableAssociation:
-    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       RouteTableId: !Ref SampleVPCPublicSubnet1RouteTable
       SubnetId: !Ref SampleVPCPublicSubnet1Subnet
   # Make Route
   # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-route.html
   SampleVPCPublicSubnet1DefaultRoute:
-    Type: 'AWS::EC2::Route'
+    Type: AWS::EC2::Route
     Properties:
       RouteTableId: !Ref SampleVPCPublicSubnet1RouteTable
       DestinationCidrBlock: 0.0.0.0/0
@@ -81,7 +81,7 @@ Resources:
   # Make EIP
   # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-eip.html
   SampleVPCPublicSubnet1EIP:
-    Type: 'AWS::EC2::EIP'
+    Type: AWS::EC2::EIP
     Properties:
       Domain: vpc
       Tags:
@@ -90,7 +90,7 @@ Resources:
   # Make NatGateway
   # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-natgateway.html
   SampleVPCPublicSubnet1NATGateway:
-    Type: 'AWS::EC2::NatGateway'
+    Type: AWS::EC2::NatGateway
     Properties:
       AllocationId: !GetAtt
         - SampleVPCPublicSubnet1EIP
@@ -103,7 +103,7 @@ Resources:
   # Make PublicSubnet2
   # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-subnet.html
   SampleVPCPublicSubnet2Subnet:
-    Type: 'AWS::EC2::Subnet'
+    Type: AWS::EC2::Subnet
     Properties:
       CidrBlock: !Ref PublicSubnet2CidrBlock
       VpcId: !Ref SampleVPC
@@ -117,7 +117,7 @@ Resources:
   # Make RouteTable
   # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-routetable.html
   SampleVPCPublicSubnet2RouteTable:
-    Type: 'AWS::EC2::RouteTable'
+    Type: AWS::EC2::RouteTable
     Properties:
       VpcId: !Ref SampleVPC
       Tags:
@@ -126,14 +126,14 @@ Resources:
   # Make RouteTableAssociation
   # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-subnet-network-acl-assoc.html
   SampleVPCPublicSubnet2RouteTableAssociation:
-    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       RouteTableId: !Ref SampleVPCPublicSubnet2RouteTable
       SubnetId: !Ref SampleVPCPublicSubnet2Subnet
   # Make Route
   # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-route.html
   SampleVPCPublicSubnet2DefaultRoute:
-    Type: 'AWS::EC2::Route'
+    Type: AWS::EC2::Route
     Properties:
       RouteTableId: !Ref SampleVPCPublicSubnet2RouteTable
       DestinationCidrBlock: 0.0.0.0/0
@@ -143,7 +143,7 @@ Resources:
   # Make EIP
   # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-eip.html
   SampleVPCPublicSubnet2EIP:
-    Type: 'AWS::EC2::EIP'
+    Type: AWS::EC2::EIP
     Properties:
       Domain: vpc
       Tags:
@@ -152,7 +152,7 @@ Resources:
   # Make NetGateway
   # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-natgateway.html
   SampleVPCPublicSubnet2NATGateway:
-    Type: 'AWS::EC2::NatGateway'
+    Type: AWS::EC2::NatGateway
     Properties:
       AllocationId: !GetAtt
         - SampleVPCPublicSubnet2EIP
@@ -165,7 +165,7 @@ Resources:
   # Make PrivateSubnet1
   # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-subnet.html
   SampleVPCPrivateSubnet1Subnet:
-    Type: 'AWS::EC2::Subnet'
+    Type: AWS::EC2::Subnet
     Properties:
       CidrBlock: !Ref PrivateSubnet1CidrBlock
       VpcId: !Ref SampleVPC
@@ -179,7 +179,7 @@ Resources:
   # Make RouteTable
   # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-routetable.html
   SampleVPCPrivateSubnet1RouteTable:
-    Type: 'AWS::EC2::RouteTable'
+    Type: AWS::EC2::RouteTable
     Properties:
       VpcId: !Ref SampleVPC
       Tags:
@@ -188,14 +188,14 @@ Resources:
   # Make RouteTableAssociation
   # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-subnet-network-acl-assoc.html
   SampleVPCPrivateSubnet1RouteTableAssociation:
-    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       RouteTableId: !Ref SampleVPCPrivateSubnet1RouteTable
       SubnetId: !Ref SampleVPCPrivateSubnet1Subnet
   # Make Route
   # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-route.html
   SampleVPCPrivateSubnet1DefaultRoute:
-    Type: 'AWS::EC2::Route'
+    Type: AWS::EC2::Route
     Properties:
       RouteTableId: !Ref SampleVPCPrivateSubnet1RouteTable
       DestinationCidrBlock: 0.0.0.0/0
@@ -204,7 +204,7 @@ Resources:
   # Make PrivateSubnet2
   # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-subnet.html
   SampleVPCPrivateSubnet2Subnet:
-    Type: 'AWS::EC2::Subnet'
+    Type: AWS::EC2::Subnet
     Properties:
       CidrBlock: !Ref PrivateSubnet2CidrBlock
       VpcId: !Ref SampleVPC
@@ -218,7 +218,7 @@ Resources:
   # Make RouteTable
   # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-routetable.html
   SampleVPCPrivateSubnet2RouteTable:
-    Type: 'AWS::EC2::RouteTable'
+    Type: AWS::EC2::RouteTable
     Properties:
       VpcId: !Ref SampleVPC
       Tags:
@@ -227,14 +227,14 @@ Resources:
   # Make RouteTableAssociation
   # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-subnet-network-acl-assoc.html
   SampleVPCPrivateSubnet2RouteTableAssociation:
-    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       RouteTableId: !Ref SampleVPCPrivateSubnet2RouteTable
       SubnetId: !Ref SampleVPCPrivateSubnet2Subnet
   # Make Route
   # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-route.html
   SampleVPCPrivateSubnet2DefaultRoute:
-    Type: 'AWS::EC2::Route'
+    Type: AWS::EC2::Route
     Properties:
       RouteTableId: !Ref SampleVPCPrivateSubnet2RouteTable
       DestinationCidrBlock: 0.0.0.0/0
@@ -243,7 +243,7 @@ Resources:
   # Make InternetGateway
   # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-internetgateway.html
   SampleVPCIGW:
-    Type: 'AWS::EC2::InternetGateway'
+    Type: AWS::EC2::InternetGateway
     Properties:
       Tags:
         - Key: Name
@@ -251,7 +251,7 @@ Resources:
   # Make VPCGatewayAttachment
   # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-vpc-gateway-attachment.html
   SampleVPCVPCGW:
-    Type: 'AWS::EC2::VPCGatewayAttachment'
+    Type: AWS::EC2::VPCGatewayAttachment
     Properties:
       VpcId: !Ref SampleVPC
       InternetGatewayId: !Ref SampleVPCIGW

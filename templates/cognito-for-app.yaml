@@ -1,6 +1,10 @@
 #
 # Cognitoの環境構築
 #
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >-
+  Make Cognito Environment for App
+
 Parameters:
   UserPoolName:
     Type: String
@@ -8,7 +12,7 @@ Parameters:
     Default: SampleUserPool
   DomainName:
     Type: String
-    Description: DomainName Prefxi for UserPool (ex. https://${DomainName}.auth.ap-northeast-1.amazoncognito.com)
+    Description: DomainName Prefix for UserPool (ex. https://${DomainName}.auth.ap-northeast-1.amazoncognito.com)
     Default: sample-demo
   ClientName:
     Type: String
@@ -21,7 +25,6 @@ Parameters:
 
 Resources:
   # Create UserPool
-  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-cognito-userpool.html
   SampleUserPool:
     Type: AWS::Cognito::UserPool
     Properties:
@@ -49,7 +52,6 @@ Resources:
             MaxLength: 256
 
   # Create UserPoolDomain
-  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-cognito-userpooldomain.html
   SampleUserPoolDomain:
     Type: AWS::Cognito::UserPoolDomain
     Properties:
@@ -57,7 +59,6 @@ Resources:
       UserPoolId: !Ref SampleUserPool
 
   # Create UserPoolClient
-  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-cognito-userpoolclient.html
   SampleUserPoolClient:
     Type: AWS::Cognito::UserPoolClient
     Properties:
@@ -131,7 +132,6 @@ Resources:
       AllowedOAuthFlowsUserPoolClient: true
 
   # Create IdPool
-  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-properties-cognito-identitypool-cognitoidentityprovider.html
   SampleIdPool:
     Type: AWS::Cognito::IdentityPool
     Properties:
@@ -144,14 +144,14 @@ Resources:
       AllowUnauthenticatedIdentities: false
 
   # Create Auth IAM:Role
-  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-iam-role.html
   SampleAuthRole:
-    Type: 'AWS::IAM::Role'
+    Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
         Statement:
-          - Action: 'sts:AssumeRoleWithWebIdentity'
-            Effect: Allow
+          - Effect: Allow
+            Action:
+              - "sts:AssumeRoleWithWebIdentity"
             Principal:
               Federated: "cognito-identity.amazonaws.com"
             Condition:
@@ -162,18 +162,17 @@ Resources:
         Version: 2012-10-17
 
   # Make IAM Policy
-  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-iam-policy.html
   SampleAuthRolePolicy:
-    Type: 'AWS::IAM::Policy'
+    Type: AWS::IAM::Policy
     Properties:
       PolicyDocument:
         Statement:
-          - Action:
-              - 'mobileanalytics:PutEvents'
-              - 'cognito-sync:*'
-              - 'cognito-identity:*'
+          - Effect: Allow
+            Action:
+              - "mobileanalytics:PutEvents"
+              - "cognito-sync:*"
+              - "cognito-identity:*"
             Resource: "*"
-            Effect: Allow
         Version: 2012-10-17
       PolicyName: !Sub "${AWS::StackName}-SampleAuthRolePolicy"
       Roles:
@@ -181,12 +180,12 @@ Resources:
 
   # Create UnAuth IAM:Role
   SampleUnAuthRole:
-    Type: 'AWS::IAM::Role'
+    Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
         Statement:
-          - Action: 'sts:AssumeRoleWithWebIdentity'
-            Effect: Allow
+          - Effect: Allow
+            Action: "sts:AssumeRoleWithWebIdentity"
             Principal:
               Federated: "cognito-identity.amazonaws.com"
             Condition:
@@ -197,22 +196,21 @@ Resources:
         Version: 2012-10-17
 
   SampleUnAuthRolePolicy:
-    Type: 'AWS::IAM::Policy'
+    Type: AWS::IAM::Policy
     Properties:
       PolicyDocument:
         Statement:
-          - Action:
-              - 'mobileanalytics:PutEvents'
-              - 'cognito-sync:*'
+          - Effect: Allow
+            Action:
+              - "mobileanalytics:PutEvents"
+              - "cognito-sync:*"
             Resource: "*"
-            Effect: Allow
         Version: 2012-10-17
       PolicyName: !Sub "${AWS::StackName}-SampleUnAuthRolePolicy"
       Roles:
         - !Ref SampleUnAuthRole
 
   # RoleAttachment for IdPool
-  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-cognito-identitypoolroleattachment.html
   SampleIdPoolRoleAttachment:
     Type: AWS::Cognito::IdentityPoolRoleAttachment
     Properties:
@@ -222,7 +220,6 @@ Resources:
         "unauthenticated": !GetAtt SampleUnAuthRole.Arn
 
 # Outputs
-# https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/outputs-section-structure.html
 Outputs:
   SampleUserPoolId:
     Value: !Ref SampleUserPool

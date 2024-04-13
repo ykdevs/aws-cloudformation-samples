@@ -29,7 +29,7 @@ Resources:
   # Make SecurityGroupEgress
   # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-security-group-egress.html
   SampleSecurityGroupEgressForAlb:
-    Type: 'AWS::EC2::SecurityGroupEgress'
+    Type: AWS::EC2::SecurityGroupEgress
     Properties:
       GroupId: !ImportValue
         'Fn::Sub': '${AlbStackName}-SampleSecurityGroupIdForAlb'
@@ -44,7 +44,7 @@ Resources:
   # Make IAM::Role
   # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-iam-role.html
   SampleServiceTaskDefTaskRole:
-    Type: 'AWS::IAM::Role'
+    Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
         Statement:
@@ -57,13 +57,13 @@ Resources:
   # Make LogGroup
   # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-logs-loggroup.html
   SampleServiceTaskDefWebLogGroup:
-    Type: 'AWS::Logs::LogGroup'
+    Type: AWS::Logs::LogGroup
     UpdateReplacePolicy: Retain
     DeletionPolicy: Retain
   # Make IAM Policy
   # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-iam-policy.html
   SampleServiceTaskDefExecutionRole:
-    Type: 'AWS::IAM::Role'
+    Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
         Statement:
@@ -75,21 +75,21 @@ Resources:
   # Make IAM Policy
   # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-iam-policy.html
   SampleServiceTaskDefExecutionRoleDefaultPolicy:
-    Type: 'AWS::IAM::Policy'
+    Type: AWS::IAM::Policy
     Properties:
       PolicyDocument:
         Statement:
           - Action:
-              - 'logs:CreateLogStream'
-              - 'logs:PutLogEvents'
+              - "logs:CreateLogStream"
+              - "logs:PutLogEvents"
             Effect: Allow
             Resource: !GetAtt SampleServiceTaskDefWebLogGroup.Arn
           - Action:
-              - 'ecr:BatchGetImage'
-              - 'ecr:GetAuthorizationToken'
-              - 'ecr:GetDownloadUrlForLayer'
-              - 'ecr:DescribeRepositories'
-              - 'ecr:DescribeImage'
+              - "ecr:BatchGetImage"
+              - "ecr:GetAuthorizationToken"
+              - "ecr:GetDownloadUrlForLayer"
+              - "ecr:DescribeRepositories"
+              - "ecr:DescribeImage"
             Resource: "*"
             Effect: Allow
         Version: 2012-10-17
@@ -100,12 +100,12 @@ Resources:
   # Make Cluster
   # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ecs-cluster.html
   SampleCluster:
-    Type: 'AWS::ECS::Cluster'
+    Type: AWS::ECS::Cluster
 
   # Make TaskDefinition
   # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ecs-taskdefinition.html
   SampleServiceTaskDef:
-    Type: 'AWS::ECS::TaskDefinition'
+    Type: AWS::ECS::TaskDefinition
     Properties:
       ContainerDefinitions:
         - Essential: true
@@ -136,7 +136,7 @@ Resources:
   # Make Service
   # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ecs-service.html
   SampleService:
-    Type: 'AWS::ECS::Service'
+    Type: AWS::ECS::Service
     Properties:
       Cluster: !Ref SampleCluster
       DeploymentController: CODE_DEPLOY
@@ -165,7 +165,7 @@ Resources:
   # Make SecurityGroup
   # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-security-group.html
   SampleSecurityGroupForEcs:
-    Type: 'AWS::EC2::SecurityGroup'
+    Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: SampleSecurityGroupForEcs
       SecurityGroupEgress:
@@ -177,7 +177,7 @@ Resources:
   # Make SecurityGroupIngress
   # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-security-group-ingress.html
   SampleSecurityGroupIngressForEcs:
-    Type: 'AWS::EC2::SecurityGroupIngress'
+    Type: AWS::EC2::SecurityGroupIngress
     Properties:
       IpProtocol: tcp
       Description: Load balancer to target

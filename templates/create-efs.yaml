@@ -1,6 +1,10 @@
 #
 # PrivateSubnet1,2にEFSを構築する
 #
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >-
+  Make EFS Environment in PrivateSubnet1,2
+
 Parameters:
   PrivateSubnet1Id:
     Description: Private Subnet1 Id
@@ -13,36 +17,32 @@ Parameters:
 Resources:
   # Make SecurityGroup
   SecurityGroupForEfs:
-    Type: 'AWS::EC2::SecurityGroup'
+    Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupName: !Sub
-        - "${AWS::StackName}-SgForEFS"
-      GroupDescription: !Sub
-        - "${AWS::StackName}-Security Group For EFS"
+      GroupName: !Sub "${AWS::StackName}-SgForEFS"
+      GroupDescription: !Sub "${AWS::StackName}-Security Group For EFS"
       SecurityGroupEgress:
-        - CidrIp: 0.0.0.0/0
-          Description: Allow all outbound traffic by default
-          IpProtocol: '-1'
+        - CidrIp: "0.0.0.0/0"
+          Description: "Allow all outbound traffic by default"
+          IpProtocol: -1
       VpcId: !Ref VpcId
       Tags:
         - Key: Name
-          Value: !Sub
-            - "${AWS::StackName}-SgForEFS"
+          Value: !Sub "${AWS::StackName}-SgForEFS"
 
   # Make Key for EFS Encryption
   KeyForEfs:
-    Type: 'AWS::KMS::Key'
+    Type: AWS::KMS::Key
     Properties:
       Description: Key For EFS Encryption
       KeyPolicy:
         Version: 2012-10-17
-        Id: !Sub
-          - "${AWS::StackName}-elasticfilesystem"
+        Id: !Sub "${AWS::StackName}-elasticfilesystem"
         Statement:
           - Sid: Allow access to EFS for all principals in the account that are authorized to use EFS
             Effect: Allow
             Principal:
-              AWS: '*'
+              AWS: "*"
             Action:
               - "kms:Encrypt"
               - "kms:Decrypt"
@@ -50,7 +50,7 @@ Resources:
               - "kms:GenerateDataKey*"
               - "kms:CreateGrant"
               - "kms:DescribeKey"
-            Resource: '*'
+            Resource: "*"
             Condition:
               StringEquals:
                 kms:CallerAccount: !Ref AWS::AccountId
@@ -62,24 +62,23 @@ Resources:
               AWS: !Sub
                 - "arn:aws:iam::${AWS::AccountId}:root"
             Action:
-              - 'kms:Describe*'
-              - 'kms:Get*'
-              - 'kms:List*'
-              - 'kms:RevokeGrant'
-            Resource: '*'
-      KeySpec: "SYMMETRIC_DEFAULT"
-      KeyUsage: "ENCRYPT_DECRYPT"
+              - "kms:Describe*"
+              - "kms:Get*"
+              - "kms:List*"
+              - "kms:RevokeGrant"
+            Resource: "*"
+      KeySpec: SYMMETRIC_DEFAULT
+      KeyUsage: ENCRYPT_DECRYPT
       MultiRegion: false
   KeyAliasForEfs:
-    Type: 'AWS::KMS::Alias'
+    Type: AWS::KMS::Alias
     Properties:
-      AliasName: !Sub
-        - "aws/elasticfilesystem-${AWS::StackName}"
+      AliasName: !Sub "aws/elasticfilesystem-${AWS::StackName}"
       TargetKeyId: !Ref KeyForEfs
 
   # Make FileSystem
   FileSystem:
-    Type: 'AWS::EFS::FileSystem'
+    Type: AWS::EFS::FileSystem
     Properties:
       BackupPolicy:
         Status: "ENABLED"
@@ -87,8 +86,7 @@ Resources:
       FileSystemPolicy: Json
       FileSystemTags:
         - "Key": Name
-          "Value": !Sub
-            - "${AWS::StackName}-FileSystem"
+          "Value": !Sub "${AWS::StackName}-FileSystem"
       KmsKeyId: !Ref KeyForEfs
       LifecyclePolicies:
         - TransitionToIA: AFTER_30_DAYS
@@ -97,29 +95,24 @@ Resources:
       ThroughputMode: bursting
       Tags:
         - Key: Name
-          Value: !Sub
-            - "${AWS::StackName}-EFS"
+          Value: !Sub "${AWS::StackName}-EFS"
 
   # Mount Target
   MountTargetResource1:
-    Type: 'AWS::EFS::MountTarget'
+    Type: AWS::EFS::MountTarget
     Properties:
       FileSystemId: !Ref FileSystem
       SubnetId: !Ref PrivateSubnet1Id
       SecurityGroups:
-        - !GetAtt
-          - SecurityGroupForEfs
-          - GroupId
+        - !GetAtt SecurityGroupForEfs.GroupId
   # Mount Target
   MountTargetResource2:
-    Type: 'AWS::EFS::MountTarget'
+    Type: AWS::EFS::MountTarget
     Properties:
       FileSystemId: !Ref FileSystem
       SubnetId: !Ref PrivateSubnet2Id
       SecurityGroups:
-        - !GetAtt
-          - SecurityGroupForEfs
-          - GroupId
+        - !GetAtt SecurityGroupForEfs.GroupId
 
 # Outputs
 Outputs:

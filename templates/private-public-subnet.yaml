@@ -28,7 +28,7 @@ Parameters:
 Resources:
   # Make VPC
   Vpc:
-    Type: 'AWS::EC2::VPC'
+    Type: AWS::EC2::VPC
     Properties:
       CidrBlock: !Ref VpcCidrBlock
       EnableDnsHostnames: true
@@ -40,14 +40,14 @@ Resources:
 
   # Make InternetGateway
   InternetGW:
-    Type: 'AWS::EC2::InternetGateway'
+    Type: AWS::EC2::InternetGateway
     Properties:
       Tags:
         - Key: Name
           Value: !Ref AWS::StackName
   # Make VPCGatewayAttachment
   VpcGw:
-    Type: 'AWS::EC2::VPCGatewayAttachment'
+    Type: AWS::EC2::VPCGatewayAttachment
     Properties:
       VpcId: !Ref Vpc
       InternetGatewayId: !Ref InternetGW
@@ -57,7 +57,7 @@ Resources:
 
   # Make PublicSubnet1
   PublicSubnet1Subnet:
-    Type: 'AWS::EC2::Subnet'
+    Type: AWS::EC2::Subnet
     Properties:
       CidrBlock: !Ref PrivateSubnet1CidrBlock
       VpcId: !Ref Vpc
@@ -73,7 +73,7 @@ Resources:
       - Vpc
   # Make RouteTable
   PublicSubnet1RouteTable:
-    Type: 'AWS::EC2::RouteTable'
+    Type: AWS::EC2::RouteTable
     Properties:
       VpcId: !Ref Vpc
       Tags:
@@ -84,7 +84,7 @@ Resources:
       - Vpc
   # Make RouteTableAssociation
   RouteSubnet1TableAssociation:
-    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       RouteTableId: !Ref PublicSubnet1RouteTable
       SubnetId: !Ref PublicSubnet1Subnet
@@ -93,7 +93,7 @@ Resources:
       - PublicSubnet1RouteTable
   # Make Route
   PublicSubnet1DefaultRoute:
-    Type: 'AWS::EC2::Route'
+    Type: AWS::EC2::Route
     Properties:
       RouteTableId: !Ref PublicSubnet1RouteTable
       DestinationCidrBlock: 0.0.0.0/0
@@ -104,7 +104,7 @@ Resources:
 
   # Make PublicSubnet2
   PublicSubnet2Subnet:
-    Type: 'AWS::EC2::Subnet'
+    Type: AWS::EC2::Subnet
     Properties:
       CidrBlock: !Ref PrivateSubnet2CidrBlock
       VpcId: !Ref Vpc
@@ -120,7 +120,7 @@ Resources:
       - Vpc
   # Make RouteTable
   PublicSubnet2RouteTable:
-    Type: 'AWS::EC2::RouteTable'
+    Type: AWS::EC2::RouteTable
     Properties:
       VpcId: !Ref Vpc
       Tags:
@@ -131,7 +131,7 @@ Resources:
       - Vpc
   # Make RouteTableAssociation
   PublicSubnet2RouteTableAssociation:
-    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       RouteTableId: !Ref PublicSubnet2RouteTable
       SubnetId: !Ref PublicSubnet2Subnet
@@ -140,7 +140,7 @@ Resources:
       - PublicSubnet2Subnet
   # Make Route
   PublicSubnet2DefaultRoute:
-    Type: 'AWS::EC2::Route'
+    Type: AWS::EC2::Route
     Properties:
       RouteTableId: !Ref PublicSubnet2RouteTable
       DestinationCidrBlock: 0.0.0.0/0
@@ -151,7 +151,7 @@ Resources:
 
   # Make EIP
   PublicSubnet1Eip:
-    Type: 'AWS::EC2::EIP'
+    Type: AWS::EC2::EIP
     Properties:
       Domain: vpc
       Tags:
@@ -160,7 +160,7 @@ Resources:
             - "${AWS::StackName}-PublicSubnet1"
   # Make NatGateway
   NatGateway1:
-    Type: 'AWS::EC2::NatGateway'
+    Type: AWS::EC2::NatGateway
     Properties:
       AllocationId: !GetAtt
         - PublicSubnet1Eip
@@ -173,7 +173,7 @@ Resources:
 
   # Make PrivateSubnet1
   PrivateSubnet1Subnet:
-    Type: 'AWS::EC2::Subnet'
+    Type: AWS::EC2::Subnet
     Properties:
       CidrBlock: !Ref PublicSubnet1CidrBlock
       VpcId: !Ref Vpc
@@ -187,7 +187,7 @@ Resources:
             - "${AWS::StackName}-PrivateSubnet1"
   # Make RouteTable
   PrivateSubnet1RouteTable:
-    Type: 'AWS::EC2::RouteTable'
+    Type: AWS::EC2::RouteTable
     Properties:
       VpcId: !Ref Vpc
       Tags:
@@ -198,7 +198,7 @@ Resources:
       - Vpc
   # Make RouteTableAssociation
   PrivateSubnet1RouteTableAssociation:
-    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       RouteTableId: !Ref PrivateSubnet1RouteTable
       SubnetId: !Ref PrivateSubnet1Subnet
@@ -207,7 +207,7 @@ Resources:
       - PrivateSubnet1Subnet
   # Make Route
   PrivateSubnet1DefaultRoute:
-    Type: 'AWS::EC2::Route'
+    Type: AWS::EC2::Route
     Properties:
       RouteTableId: !Ref PrivateSubnet1RouteTable
       DestinationCidrBlock: 0.0.0.0/0
@@ -218,7 +218,7 @@ Resources:
 
   # Make EIP
   PublicSubnet2Eip:
-    Type: 'AWS::EC2::EIP'
+    Type: AWS::EC2::EIP
     Properties:
       Domain: vpc
       Tags:
@@ -227,7 +227,7 @@ Resources:
             - "${AWS::StackName}-PublicSubnet2"
   # Make NetGateway
   NatGateway2:
-    Type: 'AWS::EC2::NatGateway'
+    Type: AWS::EC2::NatGateway
     Properties:
       AllocationId: !GetAtt
         - PublicSubnet2Eip
@@ -240,7 +240,7 @@ Resources:
 
   # Make PrivateSubnet2
   PrivateSubnet2Subnet:
-    Type: 'AWS::EC2::Subnet'
+    Type: AWS::EC2::Subnet
     Properties:
       CidrBlock: !Ref PublicSubnet2CidrBlock
       VpcId: !Ref Vpc
@@ -254,7 +254,7 @@ Resources:
             - "${AWS::StackName}-PrivateSubnet2"
   # Make RouteTable
   PrivateSubnet2RouteTable:
-    Type: 'AWS::EC2::RouteTable'
+    Type: AWS::EC2::RouteTable
     Properties:
       VpcId: !Ref Vpc
       Tags:
@@ -265,7 +265,7 @@ Resources:
       - Vpc
   # Make RouteTableAssociation
   PrivateSubnet2RouteTableAssociation:
-    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       RouteTableId: !Ref PrivateSubnet2RouteTable
       SubnetId: !Ref PrivateSubnet2Subnet
@@ -274,7 +274,7 @@ Resources:
       - PrivateSubnet2Subnet
   # Make Route
   PrivateSubnet2DefaultRoute:
-    Type: 'AWS::EC2::Route'
+    Type: AWS::EC2::Route
     Properties:
       RouteTableId: !Ref PrivateSubnet2RouteTable
       DestinationCidrBlock: 0.0.0.0/0

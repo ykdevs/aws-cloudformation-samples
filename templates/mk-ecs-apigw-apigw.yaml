@@ -18,7 +18,7 @@ Resources:
   # Make VPC Link
   # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-apigatewayv2-vpclink.html
   SampleVpcLink:
-    Type: 'AWS::ApiGatewayV2::VpcLink'
+    Type: AWS::ApiGatewayV2::VpcLink
     Properties:
       Name: 'SampleVpcLink'
       SubnetIds:
@@ -30,7 +30,7 @@ Resources:
   # Make Api
   # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-apigatewayv2-vpclink.html
   SampleApi:
-    Type: 'AWS::ApiGatewayV2::Api'
+    Type: AWS::ApiGatewayV2::Api
     Properties:
       Name: 'SampleApi'
       Description: 'Sample/ApiGateway'
@@ -39,7 +39,7 @@ Resources:
   # Make Api Stage
   # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-apigatewayv2-stage.html
   SampleApiStage:
-    Type: 'AWS::ApiGatewayV2::Stage'
+    Type: AWS::ApiGatewayV2::Stage
     Properties:
       StageName: '$default'
       ApiId: !Ref SampleApi
@@ -47,7 +47,7 @@ Resources:
   # Make Api Integration
   # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-apigatewayv2-integration.html
   SampleApiIntegration:
-    Type: 'AWS::ApiGatewayV2::Integration'
+    Type: AWS::ApiGatewayV2::Integration
     Properties:
       ApiId: !Ref SampleApi
       ConnectionId: !Ref SampleVpcLink
@@ -62,7 +62,7 @@ Resources:
   # Make Api Route
   # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-apigatewayv2-route.html
   SampleApiRoute:
-    Type: 'AWS::ApiGatewayV2::Route'
+    Type: AWS::ApiGatewayV2::Route
     Properties:
       ApiId: !Ref SampleApi
       RouteKey: 'ANY /{proxy+}'
@@ -89,10 +89,10 @@ Outputs:
   SampleExternalURL:
     Value: !Join
       - ''
-      - - 'https://'
+      - - "https://"
         - !Ref SampleApi
-        - '.execute-api.'
+        - ".execute-api."
         - !Ref 'AWS::Region'
-        - '.amazonaws.com'
+        - ".amazonaws.com"
     Export:
       Name: !Sub "${AWS::StackName}-SampleExternalURL"
