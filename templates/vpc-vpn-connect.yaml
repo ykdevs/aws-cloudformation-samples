@@ -565,7 +565,6 @@ Resources:
       SecurityGroupIds:
         - !GetAtt Vpc1PrivateSubnetSecurityGroupForEndPoint.GroupId
       SubnetIds:
-        - !Ref Vpc1PublicSubnet
         - !Ref Vpc1PrivateSubnet
       VpcEndpointType: "Interface"
       PrivateDnsEnabled: false
