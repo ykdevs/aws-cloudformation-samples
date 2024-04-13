@@ -1,12 +1,11 @@
 #
-# PrivateのVPCを構築してSSMでログインする検証
+# PublicのVPCを構築してSSMでログインする検証
 #
-# System ManagerのQuick Setupが必要
-# 更にAWS-QuickSetup-SSMHostMgmt-CollectInventoryの関連付けで30分必要な場合もある
+# InternetへのRoutingはMyIpAddressのみ許可
 #
 AWSTemplateFormatVersion: "2010-09-09"
 Description: |
-  Make Private VPC for SSM Login
+  Make Public VPC for SSM Login
 
 Parameters:
   VpcCidrBlock:
@@ -17,6 +16,9 @@ Parameters:
     Type: String
     Description: VPC Subnets CidrBlock
     Default: 192.168.0.0/28
+  MyIpAddressCidrBlock:
+    Type: String
+    Description: Your IP Address(xx.xx.xx.xx/32)
   KeyName:
     Description: SSH Key Name
     Type: AWS::EC2::KeyPair::KeyName
@@ -24,6 +26,22 @@ Parameters:
     Type: String
     Description: AMI-ID for EC2
     Default: ami-05a03e6058638183d
+  hasVpce:
+    Type: String
+    Description: "If you want to use VPC Endpoint for SSM, set true"
+    AllowedValues:
+      - "true"
+      - "false"
+  hasS3:
+    Type: String
+    Description: "If you want to use VPC Endpoint for S3, set true"
+    AllowedValues:
+      - "true"
+      - "false"
+
+Conditions:
+  hasVpce: !Equals [!Ref hasVpce, "true"]
+  hasS3Gateway: !Equals [!Ref hasS3, "true"]
 
 Resources:
 
@@ -81,6 +99,19 @@ Resources:
         - Key: Name
           Value: !Sub "${AWS::StackName}-Vpc"
 
+  VpcInternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-Vpc"
+
+  VpcVpcGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref Vpc
+      InternetGatewayId: !Ref VpcInternetGateway
+
   VpcSubnet:
     Type: AWS::EC2::Subnet
     Properties:
@@ -93,6 +124,7 @@ Resources:
         - Key: Name
           Value: !Sub "${AWS::StackName}-Vpc-Subnet"
 
+  # Route Table
   VpcSubnetRouteTable:
     Type: AWS::EC2::RouteTable
     Properties:
@@ -107,15 +139,67 @@ Resources:
       RouteTableId: !Ref VpcSubnetRouteTable
       SubnetId: !Ref VpcSubnet
 
+  VpcSubnetDefaultRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref VpcSubnetRouteTable
+      DestinationCidrBlock: !Sub "${MyIpAddressCidrBlock}"
+      GatewayId: !Ref VpcInternetGateway
+
+  # Network ACL
+  VpcSubnetNetworkAcl:
+    Type: AWS::EC2::NetworkAcl
+    Properties:
+      VpcId: !Ref Vpc
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-Vpc-Subnet"
+
+  VpcSubnetNetworkAclAssociation:
+    Type: AWS::EC2::SubnetNetworkAclAssociation
+    Properties:
+      NetworkAclId: !Ref VpcSubnetNetworkAcl
+      SubnetId: !Ref VpcSubnet
+
+  VpcSubnetNetworkAclEntryIngress:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAclId: !Ref VpcSubnetNetworkAcl
+      Egress: false
+      RuleNumber: 100
+      Protocol: 6
+      PortRange:
+        From: 22
+        To: 22
+      RuleAction: allow
+      CidrBlock: !Sub "${MyIpAddressCidrBlock}"
+
+  VpcSubnetNetworkAclEntryEgress:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAclId: !Ref VpcSubnetNetworkAcl
+      Egress: true
+      RuleNumber: 100
+      Protocol: 6
+      PortRange:
+        From: 22
+        To: 22
+      RuleAction: allow
+      CidrBlock: !Sub "${MyIpAddressCidrBlock}"
+
+  # EC2 Instance
   VpcSubnetEC2Instance:
     Type: AWS::EC2::Instance
     Properties:
       ImageId: !Ref AmiId
       InstanceType: "t2.micro"
       KeyName: !Ref KeyName
-      SecurityGroupIds:
-        - !Ref VpcSecurityGroupForEc2
-      SubnetId: !Ref VpcSubnet
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: true
+          DeviceIndex: 0
+          GroupSet:
+            - !GetAtt VpcSecurityGroupForEc2.GroupId
+          SubnetId: !Ref VpcSubnet
       IamInstanceProfile: !Ref InstanceProfile
       Tags:
         - Key: "Name"
@@ -135,7 +219,9 @@ Resources:
         - Key: Name
           Value: !Sub "${AWS::StackName}-Vpc-ForInstance"
 
+  # VPC Endpoint
   VpcSecurityGroupForEndPoint:
+    Condition: hasVpce
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupName: !Sub "${AWS::StackName}-Vpc-ForEndPoint"
@@ -152,6 +238,7 @@ Resources:
           Value: !Sub "${AWS::StackName}-Vpc-ForEndPoint"
 
   VpcEndPointForSsm:
+    Condition: hasVpce
     Type: AWS::EC2::VPCEndpoint
     Properties:
       ServiceName: !Sub "com.amazonaws.${AWS::Region}.ssm"
@@ -164,6 +251,7 @@ Resources:
       VpcId: !Ref Vpc
 
   VpcEndPointForSsmMessages:
+    Condition: hasVpce
     Type: AWS::EC2::VPCEndpoint
     Properties:
       ServiceName: !Sub "com.amazonaws.${AWS::Region}.ssmmessages"
@@ -176,6 +264,7 @@ Resources:
       VpcId: !Ref Vpc
 
   VpcEndPointForEc2Messages:
+    Condition: hasVpce
     Type: AWS::EC2::VPCEndpoint
     Properties:
       ServiceName: !Sub "com.amazonaws.${AWS::Region}.ec2messages"
@@ -187,7 +276,10 @@ Resources:
       PrivateDnsEnabled: true
       VpcId: !Ref Vpc
 
-  VpcEndPointForS3:
+  # To set PrivateDnsOnlyForInboundResolverEndpoint to true,
+  # the VPC must have a Gateway endpoint for the service.
+  VpcEndPointForS3Gateway:
+    Condition: hasS3Gateway
     Type: AWS::EC2::VPCEndpoint
     Properties:
       ServiceName: !Sub "com.amazonaws.${AWS::Region}.s3"
@@ -195,3 +287,32 @@ Resources:
         - !Ref VpcSubnetRouteTable
       VpcEndpointType: "Gateway"
       VpcId: !Ref Vpc
+
+  # Network ACL for S3 Gateway
+  VpcSubnetNetworkAclEntryEgressForS3Gateway:
+    Condition: hasS3Gateway
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAclId: !Ref VpcSubnetNetworkAcl
+      Egress: true
+      RuleNumber: 101
+      Protocol: 6
+      PortRange:
+        From: 443
+        To: 443
+      RuleAction: allow
+      CidrBlock: "0.0.0.0/0"
+
+  VpcSubnetNetworkAclEntryIngressForS3Gateway:
+    Condition: hasS3Gateway
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAclId: !Ref VpcSubnetNetworkAcl
+      Egress: false
+      RuleNumber: 101
+      Protocol: 6
+      PortRange:
+        From: 1024
+        To: 65535
+      RuleAction: allow
+      CidrBlock: "0.0.0.0/0"
