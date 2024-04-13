@@ -15,7 +15,7 @@ Parameters:
     Default: 192.168.0.0/24
   VpcSubnetCidrBlock:
     Type: String
-    Description: VPC Subnet's CidrBlock
+    Description: VPC Subnets CidrBlock
     Default: 192.168.0.0/28
   KeyName:
     Description: SSH Key Name
