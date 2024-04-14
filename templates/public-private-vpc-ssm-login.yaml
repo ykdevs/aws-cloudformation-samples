@@ -390,6 +390,7 @@ Resources:
       PrivateDnsEnabled: true
       VpcId: !Ref Vpc
 
+  # When Gateway, Both Public and Private Subnet must be set
   VpcEndPointForS3:
     Condition: hasEc2
     Type: AWS::EC2::VPCEndpoint
