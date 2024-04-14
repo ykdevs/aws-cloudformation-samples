@@ -562,7 +562,7 @@ Resources:
 
   # Allow Any outbound from EC2 to S3 Gateway
   Vpc1PrivateSubnetSecurityGroupEgressForEc2ToS3Gateway:
-    Condition: hasPublicS3Gateway
+    Condition: hasPrivateEc2
     Type: AWS::EC2::SecurityGroupEgress
     Properties:
       GroupId: !GetAtt Vpc1PrivateSubnetSecurityGroupForEc2.GroupId
@@ -637,6 +637,7 @@ Resources:
     Properties:
       ServiceName: !Sub "com.amazonaws.${AWS::Region}.s3"
       RouteTableIds:
+        - !Ref Vpc1PublicSubnetRouteTable
         - !Ref Vpc1PrivateSubnetRouteTable
       VpcEndpointType: "Gateway"
       VpcId: !Ref Vpc1
@@ -1166,6 +1167,7 @@ Resources:
     Properties:
       ServiceName: !Sub "com.amazonaws.${AWS::Region}.s3"
       RouteTableIds:
+        - !Ref Vpc2PublicSubnetRouteTable
         - !Ref Vpc2PrivateSubnetRouteTable
       VpcEndpointType: "Gateway"
       VpcId: !Ref Vpc2
