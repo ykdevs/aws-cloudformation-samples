@@ -199,7 +199,7 @@ Resources:
       RouteTableId: !Ref Vpc1PublicSubnetRouteTable
       DestinationCidrBlock: !Sub
         - "${IpAddress}/32"
-        - { "IpAddress": !GetAtt Vpc2PublicSubnetEC2Instance.PublicIp }
+        - { "IpAddress": !GetAtt Vpc2PublicSubnetEip.PublicIp }
       GatewayId: !Ref Vpc1InternetGateway
 
   Vpc1PublicSubnetNatGateway:
@@ -283,7 +283,7 @@ Resources:
       RuleAction: allow
       CidrBlock: !Sub
         - "${IpAddress}/32"
-        - { "IpAddress": !GetAtt Vpc2PublicSubnetEC2Instance.PublicIp }
+        - { "IpAddress": !GetAtt Vpc2PublicSubnetEip.PublicIp }
 
   Vpc1PublicSubnetNetworkAclEntryEgressToGlobalAny:
     Condition: hasVpc2PublicEc2
@@ -296,7 +296,7 @@ Resources:
       RuleAction: allow
       CidrBlock: !Sub
         - "${IpAddress}/32"
-        - { "IpAddress": !GetAtt Vpc2PublicSubnetEC2Instance.PublicIp }
+        - { "IpAddress": !GetAtt Vpc2PublicSubnetEip.PublicIp }
 
   # Network ACL for S3 Gateway
   Vpc1PublicSubnetNetworkAclEntryIngressForS3Gateway:
@@ -347,6 +347,21 @@ Resources:
       Tags:
         - Key: "Name"
           Value: !Sub "${AWS::StackName}-Vpc1-PublicSubnet-Instance"
+
+  Vpc1PublicSubnetEip:
+    Condition: hasPublicEc2
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-Vpc1-PublicSubnet-EC2"
+
+  Vpc1PublicSubnetEipAssociation:
+    Type: AWS::EC2::EIPAssociation
+    Properties:
+      InstanceId: !Ref Vpc1PublicSubnetEC2Instance
+      EIP: !Ref Vpc1PublicSubnetEip
 
   Vpc1PublicSubnetSecurityGroupForEc2:
     Condition: hasPublicEc2
@@ -406,7 +421,7 @@ Resources:
       Description: "Allow Any from other VPC to EC2"
       CidrIp: !Sub
         - "${IpAddress}/32"
-        - { "IpAddress": !GetAtt Vpc2PublicSubnetEC2Instance.PublicIp }
+        - { "IpAddress": !GetAtt Vpc2PublicSubnetEip.PublicIp }
       IpProtocol: -1
 
   Vpc1PublicSubnetSecurityGroupEgressForEc2ToGlobalAny:
@@ -417,7 +432,7 @@ Resources:
       Description: "Allow Any from EC2 to other VPC"
       CidrIp: !Sub
         - "${IpAddress}/32"
-        - { "IpAddress": !GetAtt Vpc2PublicSubnetEC2Instance.PublicIp }
+        - { "IpAddress": !GetAtt Vpc2PublicSubnetEip.PublicIp }
       IpProtocol: -1
 
   # Security Group Ingress for Endpoint
@@ -718,7 +733,7 @@ Resources:
       RouteTableId: !Ref Vpc2PublicSubnetRouteTable
       DestinationCidrBlock: !Sub
         - "${IpAddress}/32"
-        - { "IpAddress": !GetAtt Vpc1PublicSubnetEC2Instance.PublicIp }
+        - { "IpAddress": !GetAtt Vpc1PublicSubnetEip.PublicIp }
       GatewayId: !Ref Vpc2InternetGateway
 
   Vpc2PublicSubnetNatGateway:
@@ -809,7 +824,7 @@ Resources:
       RuleAction: allow
       CidrBlock: !Sub
         - "${IpAddress}/32"
-        - { "IpAddress": !GetAtt Vpc1PublicSubnetEC2Instance.PublicIp }
+        - { "IpAddress": !GetAtt Vpc1PublicSubnetEip.PublicIp }
 
   Vpc2PublicSubnetNetworkAclEntryEgressToGlobalAny:
     Condition: hasVpc2PublicEc2
@@ -822,7 +837,7 @@ Resources:
       RuleAction: allow
       CidrBlock: !Sub
         - "${IpAddress}/32"
-        - { "IpAddress": !GetAtt Vpc1PublicSubnetEC2Instance.PublicIp }
+        - { "IpAddress": !GetAtt Vpc1PublicSubnetEip.PublicIp }
 
   # Network ACL for S3 Gateway
   Vpc2PublicSubnetNetworkAclEntryIngressForS3Gateway:
@@ -873,6 +888,21 @@ Resources:
       Tags:
         - Key: "Name"
           Value: !Sub "${AWS::StackName}-Vpc2-PublicSubnet-Instance"
+
+  Vpc2PublicSubnetEip:
+    Condition: hasPublicEc2
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-Vpc2-PublicSubnet-EC2"
+
+  Vpc2PublicSubnetEipAssociation:
+    Type: AWS::EC2::EIPAssociation
+    Properties:
+      InstanceId: !Ref Vpc2PublicSubnetEC2Instance
+      EIP: !Ref Vpc2PublicSubnetEip
 
   Vpc2PublicSubnetSecurityGroupForEc2:
     Condition: hasVpc2PublicEc2
@@ -932,7 +962,7 @@ Resources:
       Description: "Allow Any from other VPC to EC2"
       CidrIp: !Sub
         - "${IpAddress}/32"
-        - { "IpAddress": !GetAtt Vpc1PublicSubnetEC2Instance.PublicIp }
+        - { "IpAddress": !GetAtt Vpc1PublicSubnetEip.PublicIp }
       IpProtocol: -1
 
   Vpc2PublicSubnetSecurityGroupEgressForEc2TogAny:
@@ -943,7 +973,7 @@ Resources:
       Description: "Allow Any from EC2 to other VPC"
       CidrIp: !Sub
         - "${IpAddress}/32"
-        - { "IpAddress": !GetAtt Vpc1PublicSubnetEC2Instance.PublicIp }
+        - { "IpAddress": !GetAtt Vpc1PublicSubnetEip.PublicIp }
       IpProtocol: -1
 
   # Security Group Ingress for Endpoint
@@ -1092,7 +1122,7 @@ Resources:
 
   # Allow Any outbound from EC2 to S3 Gateway
   Vpc2PrivateSubnetSecurityGroupEgressForEc2ToS3Gateway:
-    Condition: hasVpc2PublicS3Gateway
+    Condition: hasVpc2PrivateEc2
     Type: AWS::EC2::SecurityGroupEgress
     Properties:
       GroupId: !GetAtt Vpc2PrivateSubnetSecurityGroupForEc2.GroupId
