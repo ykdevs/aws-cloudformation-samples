@@ -263,7 +263,7 @@ Resources:
       NetworkAclId: !Ref VpcPublicSubnetNetworkAcl
       SubnetId: !Ref VpcPublicSubnet
 
-  # Allow Any from MyIpAddress to VPC PublicSubnet
+  # Allow Any from VPC local
   VpcPublicSubnetNetworkAclEntryIngressSshFromLocal:
     Condition: hasNetworkAcl
     Type: AWS::EC2::NetworkAclEntry

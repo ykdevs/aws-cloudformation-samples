@@ -45,6 +45,12 @@ Parameters:
     Type: String
     Description: AMI-ID for EC2
     Default: ami-05a03e6058638183d
+  HasVpc2:
+    Type: String
+    Description: Whether to create VPC2 or not
+    AllowedValues:
+      - "true"
+      - "false"
   HasPrivateEc2:
     Type: String
     Description: Whether to create EC2 instance or not
@@ -65,10 +71,15 @@ Parameters:
       - "false"
 
 Conditions:
+  hasVpc2: !Equals [ !Ref HasVpc2, "true" ]
   hasPrivateEc2: !Equals [ !Ref HasPrivateEc2, "true" ]
   hasPublicEc2: !Equals [ !Ref HasPublicEc2, "true" ]
+  hasVpc2PrivateEc2: !And [ Condition: hasVpc2, Condition: hasPrivateEc2 ]
+  hasVpc2PublicEc2: !And [ Condition: hasVpc2, Condition: hasPublicEc2 ]
   hasEc2: !Or [ Condition: hasPrivateEc2, Condition: hasPublicEc2 ]
+  hasVpc2Ec2: !And [ Condition: hasVpc2, Condition: hasEc2 ]
   hasPublicS3Gateway: !And [!Equals [ !Ref HasPublicS3Gateway, "true" ], Condition: hasPublicEc2]
+  hasVpc2PublicS3Gateway: !And [ Condition: hasVpc2, Condition: hasPublicS3Gateway ]
 
 Resources:
 
@@ -151,41 +162,9 @@ Resources:
       VpcId: !Ref Vpc1
       InternetGatewayId: !Ref Vpc1InternetGateway
 
-  # PrivateSubnet for VPC1
-  Vpc1PrivateSubnet:
-    Type: AWS::EC2::Subnet
-    Properties:
-      CidrBlock: !Ref Vpc1PrivateSubnetCidrBlock
-      VpcId: !Ref Vpc1
-      AvailabilityZone: !Select
-        - 0
-        - !GetAZs ''
-      Tags:
-        - Key: Name
-          Value: !Sub "${AWS::StackName}-Vpc1-PrivateSubnet"
-
-  Vpc1PrivateSubnetRouteTable:
-    Type: AWS::EC2::RouteTable
-    Properties:
-      VpcId: !Ref Vpc1
-      Tags:
-        - Key: Name
-          Value: !Sub "${AWS::StackName}-Vpc1-PrivateSubnet"
-
-  Vpc1PrivateSubnetRouteTableAssociation:
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties:
-      RouteTableId: !Ref Vpc1PrivateSubnetRouteTable
-      SubnetId: !Ref Vpc1PrivateSubnet
-
-  Vpc1PrivateSubnetDefaultRoute:
-    Type: AWS::EC2::Route
-    Properties:
-      RouteTableId: !Ref Vpc1PrivateSubnetRouteTable
-      DestinationCidrBlock: "0.0.0.0/0"
-      NatGatewayId: !Ref Vpc1PublicSubnetNatGateway
-
+  ##############################################################################
   # PublicSubnet for VPC1
+  ##############################################################################
   Vpc1PublicSubnet:
     Type: AWS::EC2::Subnet
     Properties:
@@ -214,7 +193,7 @@ Resources:
 
   # Allow traffic between VPC1 and VPC2 Global IP
   Vpc1PublicSubnetDefaultRoute:
-    Condition: hasPublicEc2
+    Condition: hasVpc2PublicEc2
     Type: AWS::EC2::Route
     Properties:
       RouteTableId: !Ref Vpc1PublicSubnetRouteTable
@@ -233,7 +212,9 @@ Resources:
         - Key: Name
           Value: !Sub "${AWS::StackName}-Vpc1-PublicSubnet"
 
+  ##############################################################################
   # Network ACL for VPC1 PublicSubnet
+  ##############################################################################
   Vpc1PublicSubnetNetworkAcl:
     Type: AWS::EC2::NetworkAcl
     Properties:
@@ -248,66 +229,101 @@ Resources:
       NetworkAclId: !Ref Vpc1PublicSubnetNetworkAcl
       SubnetId: !Ref Vpc1PublicSubnet
 
-  # Allow SSH from VPC2 Global IP to VPC1 PublicSubnet
-  Vpc1PublicSubnetNetworkAclEntryIngress:
-    Condition: hasPublicEc2
+  # Allow Any from VPC1 local
+  Vpc1PublicSubnetNetworkAclEntryIngressFromLocal:
     Type: AWS::EC2::NetworkAclEntry
     Properties:
       NetworkAclId: !Ref Vpc1PublicSubnetNetworkAcl
       Egress: false
       RuleNumber: 100
-      Protocol: 6
-      PortRange:
-        From: 22
-        To: 22
+      Protocol: -1
       RuleAction: allow
-      CidrBlock: !Sub
-        - "${IpAddress}/32"
-        - { "IpAddress": !GetAtt Vpc2PublicSubnetEC2Instance.PublicIp }
+      CidrBlock: !Ref Vpc1CidrBlock
 
-  # Allow SSH from VPC1 PublicSubnet to VPC2 Global IP
-  Vpc1PublicSubnetNetworkAclEntryEgress:
-    Condition: hasPublicEc2
+  Vpc1PublicSubnetNetworkAclEntryEgressToLocal:
     Type: AWS::EC2::NetworkAclEntry
     Properties:
       NetworkAclId: !Ref Vpc1PublicSubnetNetworkAcl
       Egress: true
       RuleNumber: 100
-      Protocol: 6
-      PortRange:
-        From: 22
-        To: 22
+      Protocol: -1
+      RuleAction: allow
+      CidrBlock: !Ref Vpc1CidrBlock
+
+  # Allow Any from VPC2 local
+  Vpc1PublicSubnetNetworkAclEntryIngressFromOther:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAclId: !Ref Vpc1PublicSubnetNetworkAcl
+      Egress: false
+      RuleNumber: 101
+      Protocol: -1
+      RuleAction: allow
+      CidrBlock: !Ref Vpc2CidrBlock
+
+  Vpc1PublicSubnetNetworkAclEntryEgressToOther:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAclId: !Ref Vpc1PublicSubnetNetworkAcl
+      Egress: true
+      RuleNumber: 101
+      Protocol: -1
+      RuleAction: allow
+      CidrBlock: !Ref Vpc2CidrBlock
+
+  # Allow Any from VPC2 Global IP to VPC1 PublicSubnet
+  Vpc1PublicSubnetNetworkAclEntryIngressFromGlobalAny:
+    Condition: hasVpc2PublicEc2
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAclId: !Ref Vpc1PublicSubnetNetworkAcl
+      Egress: false
+      RuleNumber: 102
+      Protocol: -1
+      RuleAction: allow
+      CidrBlock: !Sub
+        - "${IpAddress}/32"
+        - { "IpAddress": !GetAtt Vpc2PublicSubnetEC2Instance.PublicIp }
+
+  Vpc1PublicSubnetNetworkAclEntryEgressToGlobalAny:
+    Condition: hasVpc2PublicEc2
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAclId: !Ref Vpc1PublicSubnetNetworkAcl
+      Egress: true
+      RuleNumber: 102
+      Protocol: -1
       RuleAction: allow
       CidrBlock: !Sub
         - "${IpAddress}/32"
         - { "IpAddress": !GetAtt Vpc2PublicSubnetEC2Instance.PublicIp }
 
   # Network ACL for S3 Gateway
-  Vpc1PublicSubnetNetworkAclEntryEgressForS3Gateway:
-    Condition: hasPublicS3Gateway
-    Type: AWS::EC2::NetworkAclEntry
-    Properties:
-      NetworkAclId: !Ref Vpc1PublicSubnetNetworkAcl
-      Egress: true
-      RuleNumber: 101
-      Protocol: 6
-      PortRange:
-        From: 443
-        To: 443
-      RuleAction: allow
-      CidrBlock: "0.0.0.0/0"
-
   Vpc1PublicSubnetNetworkAclEntryIngressForS3Gateway:
     Condition: hasPublicS3Gateway
     Type: AWS::EC2::NetworkAclEntry
     Properties:
       NetworkAclId: !Ref Vpc1PublicSubnetNetworkAcl
       Egress: false
-      RuleNumber: 101
+      RuleNumber: 199
       Protocol: 6
       PortRange:
         From: 1024
         To: 65535
+      RuleAction: allow
+      CidrBlock: "0.0.0.0/0"
+
+  Vpc1PublicSubnetNetworkAclEntryEgressForS3Gateway:
+    Condition: hasPublicS3Gateway
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAclId: !Ref Vpc1PublicSubnetNetworkAcl
+      Egress: true
+      RuleNumber: 199
+      Protocol: 6
+      PortRange:
+        From: 443
+        To: 443
       RuleAction: allow
       CidrBlock: "0.0.0.0/0"
 
@@ -343,6 +359,7 @@ Resources:
         - Key: Name
           Value: !Sub "${AWS::StackName}-Vpc1-PublicSubnet-ForInstance"
 
+  # Allow Any from VPC1 local
   Vpc1PublicSubnetSecurityGroupIngressForEc2FromLocal:
     Condition: hasPublicEc2
     Type: AWS::EC2::SecurityGroupIngress
@@ -361,6 +378,61 @@ Resources:
       CidrIp: !Ref Vpc1CidrBlock
       IpProtocol: -1
 
+  # Allow Any from VPC2 local
+  Vpc1PublicSubnetSecurityGroupIngressForEc2FromOther:
+    Condition: hasPublicEc2
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !GetAtt Vpc1PublicSubnetSecurityGroupForEc2.GroupId
+      Description: "Allow all traffic from other VPC to EC2"
+      CidrIp: !Ref Vpc2CidrBlock
+      IpProtocol: -1
+
+  Vpc1PublicSubnetSecurityGroupEgressForEc2ToOther:
+    Condition: hasPublicEc2
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId: !GetAtt Vpc1PublicSubnetSecurityGroupForEc2.GroupId
+      Description: "Allow all traffic from EC2 to other VPC"
+      CidrIp: !Ref Vpc2CidrBlock
+      IpProtocol: -1
+
+  # Allow Any from VPC2 Global IP to VPC1 PublicSubnet
+  Vpc1PublicSubnetSecurityGroupIngressForEc2FromGlobalAny:
+    Condition: hasVpc2PublicEc2
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !GetAtt Vpc1PublicSubnetSecurityGroupForEc2.GroupId
+      Description: "Allow Any from other VPC to EC2"
+      CidrIp: !Sub
+        - "${IpAddress}/32"
+        - { "IpAddress": !GetAtt Vpc2PublicSubnetEC2Instance.PublicIp }
+      IpProtocol: -1
+
+  Vpc1PublicSubnetSecurityGroupEgressForEc2ToGlobalAny:
+    Condition: hasVpc2PublicEc2
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId: !GetAtt Vpc1PublicSubnetSecurityGroupForEc2.GroupId
+      Description: "Allow Any from EC2 to other VPC"
+      CidrIp: !Sub
+        - "${IpAddress}/32"
+        - { "IpAddress": !GetAtt Vpc2PublicSubnetEC2Instance.PublicIp }
+      IpProtocol: -1
+
+  # Security Group Ingress for Endpoint
+  Vpc1PublicSubnetSecurityGroupIngressForEndPoint:
+    Condition: hasPublicEc2
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !GetAtt Vpc1SecurityGroupForEndPoint.GroupId
+      Description: "Allow HTTPS from EC2 to Endpoint"
+      SourceSecurityGroupId: !GetAtt Vpc1PublicSubnetSecurityGroupForEc2.GroupId
+      IpProtocol: tcp
+      FromPort: 443
+      ToPort: 443
+
+  # Allow Any outbound from EC2 to S3 Gateway
   Vpc1PublicSubnetSecurityGroupEgressForEc2ToS3Gateway:
     Condition: hasPublicS3Gateway
     Type: AWS::EC2::SecurityGroupEgress
@@ -368,107 +440,46 @@ Resources:
       GroupId: !GetAtt Vpc1PublicSubnetSecurityGroupForEc2.GroupId
       Description: "Allow all traffic from EC2 to S3 Gateway"
       CidrIp: "0.0.0.0/0"
-      IpProtocol: -1
-
-  Vpc1PublicSubnetSecurityGroupIngressForEc2FromOther:
-    Condition: hasPublicEc2
-    Type: AWS::EC2::SecurityGroupIngress
-    Properties:
-      GroupId: !GetAtt Vpc1PublicSubnetSecurityGroupForEc2.GroupId
-      Description: "Allow SSH from other VPC to EC2"
-      CidrIp: !Ref Vpc2CidrBlock
-      IpProtocol: tcp
-      FromPort: 22
-      ToPort: 22
-
-  Vpc1PublicSubnetSecurityGroupEgressForEc2ToOther:
-    Condition: hasPublicEc2
-    Type: AWS::EC2::SecurityGroupEgress
-    Properties:
-      GroupId: !GetAtt Vpc1PublicSubnetSecurityGroupForEc2.GroupId
-      Description: "Allow SSH from EC2 to other VPC"
-      CidrIp: !Ref Vpc2CidrBlock
-      IpProtocol: tcp
-      FromPort: 22
-      ToPort: 22
-
-  Vpc1PublicSubnetSecurityGroupIngressForEndPoint:
-    Condition: hasPublicEc2
-    Type: AWS::EC2::SecurityGroupIngress
-    Properties:
-      GroupId: !GetAtt Vpc1PublicSubnetSecurityGroupForEndPoint.GroupId
-      Description: "Allow HTTPS from EC2 to Endpoint"
-      SourceSecurityGroupId: !GetAtt Vpc1PublicSubnetSecurityGroupForEc2.GroupId
       IpProtocol: tcp
       FromPort: 443
       ToPort: 443
 
-  # EndPoint for VPC1 PublicSubnet
-  Vpc1PublicSubnetSecurityGroupForEndPoint:
-    Condition: hasPublicEc2
-    Type: AWS::EC2::SecurityGroup
+  ##############################################################################
+  # PrivateSubnet for VPC1
+  ##############################################################################
+  Vpc1PrivateSubnet:
+    Type: AWS::EC2::Subnet
     Properties:
-      GroupName: !Sub "${AWS::StackName}-Vpc1-PublicSubnet-ForEndPoint"
-      GroupDescription: !Sub "Generated by ${AWS::StackName}"
-      SecurityGroupEgress:
-        - Description: "Allow HTTPS from Endpoint to VPC1 PublicSubnet"
-          CidrIp: !Ref Vpc1PublicSubnetCidrBlock
-          IpProtocol: tcp
-          FromPort: 443
-          ToPort: 443
+      CidrBlock: !Ref Vpc1PrivateSubnetCidrBlock
+      VpcId: !Ref Vpc1
+      AvailabilityZone: !Select
+        - 0
+        - !GetAZs ''
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-Vpc1-PrivateSubnet"
+
+  Vpc1PrivateSubnetRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
       VpcId: !Ref Vpc1
       Tags:
         - Key: Name
-          Value: !Sub "${AWS::StackName}-Vpc1-PublicSubnet-ForEndPoint"
+          Value: !Sub "${AWS::StackName}-Vpc1-PrivateSubnet"
 
-  Vpc1PublicSubnetEndPointForSsm:
-    Condition: hasPublicEc2
-    Type: AWS::EC2::VPCEndpoint
+  Vpc1PrivateSubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
-      ServiceName: !Sub "com.amazonaws.${AWS::Region}.ssm"
-      SecurityGroupIds:
-        - !GetAtt Vpc1PublicSubnetSecurityGroupForEndPoint.GroupId
-      SubnetIds:
-        - !Ref Vpc1PublicSubnet
-      VpcEndpointType: "Interface"
-      PrivateDnsEnabled: false
-      VpcId: !Ref Vpc1
+      RouteTableId: !Ref Vpc1PrivateSubnetRouteTable
+      SubnetId: !Ref Vpc1PrivateSubnet
 
-  Vpc1PublicSubnetEndPointForSsmMessages:
-    Condition: hasPublicEc2
-    Type: AWS::EC2::VPCEndpoint
+  # PrivateSubnet Default Route to NAT Gateway
+  Vpc1PrivateSubnetDefaultRoute:
+    Type: AWS::EC2::Route
     Properties:
-      ServiceName: !Sub "com.amazonaws.${AWS::Region}.ssmmessages"
-      SecurityGroupIds:
-        - !GetAtt Vpc1PublicSubnetSecurityGroupForEndPoint.GroupId
-      SubnetIds:
-        - !Ref Vpc1PublicSubnet
-      VpcEndpointType: "Interface"
-      PrivateDnsEnabled: false
-      VpcId: !Ref Vpc1
-
-  Vpc1PublicSubnetEndPointForEc2Messages:
-    Condition: hasPublicEc2
-    Type: AWS::EC2::VPCEndpoint
-    Properties:
-      ServiceName: !Sub "com.amazonaws.${AWS::Region}.ec2messages"
-      SecurityGroupIds:
-        - !GetAtt Vpc1PublicSubnetSecurityGroupForEndPoint.GroupId
-      SubnetIds:
-        - !Ref Vpc1PublicSubnet
-      VpcEndpointType: "Interface"
-      PrivateDnsEnabled: false
-      VpcId: !Ref Vpc1
-
-  Vpc1PublicSubnetEndPointForS3:
-    Condition: hasPublicS3Gateway
-    Type: AWS::EC2::VPCEndpoint
-    Properties:
-      ServiceName: !Sub "com.amazonaws.${AWS::Region}.s3"
-      RouteTableIds:
-        - !Ref Vpc1PublicSubnetRouteTable
-      VpcEndpointType: "Gateway"
-      VpcId: !Ref Vpc1
+      RouteTableId: !Ref Vpc1PrivateSubnetRouteTable
+      DestinationCidrBlock: "0.0.0.0/0"
+      NatGatewayId: !Ref Vpc1PublicSubnetNatGateway
 
   ##############################################################################
   # EC2 Instance for VPC1 PrivateSubnet
@@ -499,6 +510,7 @@ Resources:
         - Key: Name
           Value: !Sub "${AWS::StackName}-Vpc1-PrivateSubnet-ForInstance"
 
+  # Allow Any from VPC1 local
   Vpc1PrivateSubnetSecurityGroupIngressForEc2FromLocal:
     Condition: hasPrivateEc2
     Type: AWS::EC2::SecurityGroupIngress
@@ -514,90 +526,113 @@ Resources:
     Properties:
       GroupId: !GetAtt Vpc1PrivateSubnetSecurityGroupForEc2.GroupId
       Description: "Allow all traffic from EC2 to local"
-      CidrIp: "0.0.0.0/0"
+      CidrIp: !Ref Vpc1CidrBlock
       IpProtocol: -1
 
+  # Allow Any from VPC2 local
   Vpc1PrivateSubnetSecurityGroupIngressForEc2FromOther:
     Condition: hasPrivateEc2
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
       GroupId: !GetAtt Vpc1PrivateSubnetSecurityGroupForEc2.GroupId
-      Description: "Allow SSH from other VPC to EC2"
+      Description: "Allow all traffic from other VPC to EC2"
       CidrIp: !Ref Vpc2CidrBlock
-      IpProtocol: tcp
-      FromPort: 22
-      ToPort: 22
+      IpProtocol: -1
 
+  Vpc1PrivateSubnetSecurityGroupEgressForEc2ToOther:
+    Condition: hasPrivateEc2
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId: !GetAtt Vpc1PrivateSubnetSecurityGroupForEc2.GroupId
+      Description: "Allow all traffic from EC2 to other VPC"
+      CidrIp: !Ref Vpc2CidrBlock
+      IpProtocol: -1
+
+  # Security Group Ingress for Endpoint
   Vpc1PrivateSubnetSecurityGroupIngressForEndPoint:
     Condition: hasPrivateEc2
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
-      GroupId: !GetAtt Vpc1PrivateSubnetSecurityGroupForEndPoint.GroupId
+      GroupId: !GetAtt Vpc1SecurityGroupForEndPoint.GroupId
       Description: "Allow HTTPS from EC2 to Endpoint"
       SourceSecurityGroupId: !GetAtt Vpc1PrivateSubnetSecurityGroupForEc2.GroupId
       IpProtocol: tcp
       FromPort: 443
       ToPort: 443
 
-  # EndPoint for VPC1 PrivateSubnet
-  Vpc1PrivateSubnetSecurityGroupForEndPoint:
-    Condition: hasPrivateEc2
+  # Allow Any outbound from EC2 to S3 Gateway
+  Vpc1PrivateSubnetSecurityGroupEgressForEc2ToS3Gateway:
+    Condition: hasPublicS3Gateway
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId: !GetAtt Vpc1PrivateSubnetSecurityGroupForEc2.GroupId
+      Description: "Allow all traffic from EC2 to S3 Gateway"
+      CidrIp: "0.0.0.0/0"
+      IpProtocol: tcp
+      FromPort: 443
+      ToPort: 443
+
+  ##############################################################################
+  # EndPoint for VPC1 (shared between Private Subnet and Public Subnet)
+  ##############################################################################
+  Vpc1SecurityGroupForEndPoint:
+    Condition: hasEc2
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupName: !Sub "${AWS::StackName}-Vpc1-PrivateSubnet-ForEndPoint"
+      GroupName: !Sub "${AWS::StackName}-Vpc1-ForEndPoint"
       GroupDescription: !Sub "Generated by ${AWS::StackName}"
       SecurityGroupEgress:
-        - Description: "Allow HTTPS from Endpoint to VPC1 PrivateSubnet"
-          CidrIp: !Ref Vpc1PublicSubnetCidrBlock
+        - Description: "Allow HTTPS from Endpoint to VPC1"
+          CidrIp: !Ref Vpc1CidrBlock
           IpProtocol: tcp
           FromPort: 443
           ToPort: 443
       VpcId: !Ref Vpc1
       Tags:
         - Key: Name
-          Value: !Sub "${AWS::StackName}-Vpc1-PrivateSubnet-ForEndPoint"
+          Value: !Sub "${AWS::StackName}-Vpc1-ForEndPoint"
 
-  Vpc1PrivateSubnetEndPointForSsm:
-    Condition: hasPrivateEc2
+  Vpc1EndPointForSsm:
+    Condition: hasEc2
     Type: AWS::EC2::VPCEndpoint
     Properties:
       ServiceName: !Sub "com.amazonaws.${AWS::Region}.ssm"
       SecurityGroupIds:
-        - !GetAtt Vpc1PrivateSubnetSecurityGroupForEndPoint.GroupId
+        - !GetAtt Vpc1SecurityGroupForEndPoint.GroupId
       SubnetIds:
         - !Ref Vpc1PrivateSubnet
       VpcEndpointType: "Interface"
-      PrivateDnsEnabled: false
+      PrivateDnsEnabled: true
       VpcId: !Ref Vpc1
 
-  Vpc1PrivateSubnetEndPointForSsmMessages:
-    Condition: hasPrivateEc2
+  Vpc1EndPointForSsmMessages:
+    Condition: hasEc2
     Type: AWS::EC2::VPCEndpoint
     Properties:
       ServiceName: !Sub "com.amazonaws.${AWS::Region}.ssmmessages"
       SecurityGroupIds:
-        - !GetAtt Vpc1PrivateSubnetSecurityGroupForEndPoint.GroupId
+        - !GetAtt Vpc1SecurityGroupForEndPoint.GroupId
       SubnetIds:
         - !Ref Vpc1PrivateSubnet
       VpcEndpointType: "Interface"
-      PrivateDnsEnabled: false
+      PrivateDnsEnabled: true
       VpcId: !Ref Vpc1
 
-  Vpc1PrivateSubnetEndPointForEc2Messages:
-    Condition: hasPrivateEc2
+  Vpc1EndPointForEc2Messages:
+    Condition: hasEc2
     Type: AWS::EC2::VPCEndpoint
     Properties:
       ServiceName: !Sub "com.amazonaws.${AWS::Region}.ec2messages"
       SecurityGroupIds:
-        - !GetAtt Vpc1PrivateSubnetSecurityGroupForEndPoint.GroupId
+        - !GetAtt Vpc1SecurityGroupForEndPoint.GroupId
       SubnetIds:
         - !Ref Vpc1PrivateSubnet
       VpcEndpointType: "Interface"
-      PrivateDnsEnabled: false
+      PrivateDnsEnabled: true
       VpcId: !Ref Vpc1
 
-  Vpc1PrivateSubnetEndPointForS3:
-    Condition: hasPrivateEc2
+  Vpc1EndPointForS3:
+    Condition: hasEc2
     Type: AWS::EC2::VPCEndpoint
     Properties:
       ServiceName: !Sub "com.amazonaws.${AWS::Region}.s3"
@@ -616,6 +651,7 @@ Resources:
   #    - VPC2 PrivateSubnet EC2 Instance
   ##############################################################################
   Vpc2:
+    Condition: hasVpc2
     Type: AWS::EC2::VPC
     Properties:
       CidrBlock: !Ref Vpc2CidrBlock
@@ -627,6 +663,7 @@ Resources:
           Value: !Sub "${AWS::StackName}-Vpc2"
 
   Vpc2InternetGateway:
+    Condition: hasVpc2
     Type: AWS::EC2::InternetGateway
     Properties:
       Tags:
@@ -634,47 +671,17 @@ Resources:
           Value: !Sub "${AWS::StackName}-Vpc2"
 
   Vpc2VpcGatewayAttachment:
+    Condition: hasVpc2
     Type: AWS::EC2::VPCGatewayAttachment
     Properties:
       VpcId: !Ref Vpc2
       InternetGatewayId: !Ref Vpc2InternetGateway
 
-  # PrivateSubnet for VPC2
-  Vpc2PrivateSubnet:
-    Type: AWS::EC2::Subnet
-    Properties:
-      CidrBlock: !Ref Vpc2PrivateSubnetCidrBlock
-      VpcId: !Ref Vpc2
-      AvailabilityZone: !Select
-        - 0
-        - !GetAZs ''
-      Tags:
-        - Key: Name
-          Value: !Sub "${AWS::StackName}-Vpc2-PrivateSubnet"
-
-  Vpc2PrivateSubnetRouteTable:
-    Type: AWS::EC2::RouteTable
-    Properties:
-      VpcId: !Ref Vpc2
-      Tags:
-        - Key: Name
-          Value: !Sub "${AWS::StackName}-Vpc2-PrivateSubnet"
-
-  Vpc2PrivateSubnetRouteTableAssociation:
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties:
-      RouteTableId: !Ref Vpc2PrivateSubnetRouteTable
-      SubnetId: !Ref Vpc2PrivateSubnet
-
-  Vpc2PrivateSubnetDefaultRoute:
-    Type: AWS::EC2::Route
-    Properties:
-      RouteTableId: !Ref Vpc2PrivateSubnetRouteTable
-      DestinationCidrBlock: "0.0.0.0/0"
-      NatGatewayId: !Ref Vpc2PublicSubnetNatGateway
-
+  ##############################################################################
   # PublicSubnet for VPC2
+  ##############################################################################
   Vpc2PublicSubnet:
+    Condition: hasVpc2
     Type: AWS::EC2::Subnet
     Properties:
       CidrBlock: !Ref Vpc2PublicSubnetCidrBlock
@@ -687,6 +694,7 @@ Resources:
           Value: !Sub "${AWS::StackName}-Vpc2-PublicSubnet"
 
   Vpc2PublicSubnetRouteTable:
+    Condition: hasVpc2
     Type: AWS::EC2::RouteTable
     Properties:
       VpcId: !Ref Vpc2
@@ -695,6 +703,7 @@ Resources:
           Value: !Sub "${AWS::StackName}-Vpc2-PublicSubnet"
 
   Vpc2PublicSubnetRouteTableAssociation:
+    Condition: hasVpc2
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       RouteTableId: !Ref Vpc2PublicSubnetRouteTable
@@ -702,7 +711,7 @@ Resources:
 
   # Allow traffic between VPC2 and VPC1 Global IP
   Vpc2PublicSubnetDefaultRoute:
-    Condition: hasPublicEc2
+    Condition: hasVpc2PublicEc2
     Type: AWS::EC2::Route
     Properties:
       RouteTableId: !Ref Vpc2PublicSubnetRouteTable
@@ -712,6 +721,7 @@ Resources:
       GatewayId: !Ref Vpc2InternetGateway
 
   Vpc2PublicSubnetNatGateway:
+    Condition: hasVpc2
     Type: AWS::EC2::NatGateway
     Properties:
       ConnectivityType: private
@@ -721,8 +731,11 @@ Resources:
         - Key: Name
           Value: !Sub "${AWS::StackName}-Vpc2-PublicSubnet"
 
+  ##############################################################################
   # Network ACL for VPC2 PublicSubnet
+  ##############################################################################
   Vpc2PublicSubnetNetworkAcl:
+    Condition: hasVpc2
     Type: AWS::EC2::NetworkAcl
     Properties:
       VpcId: !Ref Vpc2
@@ -731,67 +744,93 @@ Resources:
           Value: !Sub "${AWS::StackName}-Vpc2-PublicSubnet"
 
   Vpc2PublicSubnetNetworkAclAssociation:
+    Condition: hasVpc2
     Type: AWS::EC2::SubnetNetworkAclAssociation
     Properties:
       NetworkAclId: !Ref Vpc2PublicSubnetNetworkAcl
       SubnetId: !Ref Vpc2PublicSubnet
 
-  # Allow SSH from VPC1 Global IP to VPC2 PublicSubnet
-  Vpc2PublicSubnetNetworkAclEntryIngress:
-    Condition: hasPublicEc2
+  # Allow Any from VPC2 local
+  Vpc2PublicSubnetNetworkAclEntryIngressFromLocal:
+    Condition: hasVpc2
     Type: AWS::EC2::NetworkAclEntry
     Properties:
       NetworkAclId: !Ref Vpc2PublicSubnetNetworkAcl
       Egress: false
       RuleNumber: 100
-      Protocol: 6
-      PortRange:
-        From: 22
-        To: 22
+      Protocol: -1
       RuleAction: allow
-      CidrBlock: !Sub
-        - "${IpAddress}/32"
-        - { "IpAddress": !GetAtt Vpc1PublicSubnetEC2Instance.PublicIp }
+      CidrBlock: !Ref Vpc2CidrBlock
 
-  # Allow SSH from VPC2 PublicSubnet to VPC1 Global IP
-  Vpc2PublicSubnetNetworkAclEntryEgress:
-    Condition: hasPublicEc2
+  Vpc2PublicSubnetNetworkAclEntryEgressToLocal:
+    Condition: hasVpc2
     Type: AWS::EC2::NetworkAclEntry
     Properties:
       NetworkAclId: !Ref Vpc2PublicSubnetNetworkAcl
       Egress: true
       RuleNumber: 100
-      Protocol: 6
-      PortRange:
-        From: 22
-        To: 22
+      Protocol: -1
+      RuleAction: allow
+      CidrBlock: !Ref Vpc2CidrBlock
+
+  # Allow Any from VPC1 local
+  Vpc2PublicSubnetNetworkAclEntryIngressFromOther:
+    Condition: hasVpc2
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAclId: !Ref Vpc2PublicSubnetNetworkAcl
+      Egress: false
+      RuleNumber: 101
+      Protocol: -1
+      RuleAction: allow
+      CidrBlock: !Ref Vpc1CidrBlock
+
+  Vpc2PublicSubnetNetworkAclEntryEgressToOther:
+    Condition: hasVpc2
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAclId: !Ref Vpc2PublicSubnetNetworkAcl
+      Egress: true
+      RuleNumber: 101
+      Protocol: -1
+      RuleAction: allow
+      CidrBlock: !Ref Vpc1CidrBlock
+
+  # Allow Any from VPC1 Global IP to VPC2 PublicSubnet
+  Vpc2PublicSubnetNetworkAclEntryIngressFromGlobalAny:
+    Condition: hasVpc2PublicEc2
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAclId: !Ref Vpc2PublicSubnetNetworkAcl
+      Egress: false
+      RuleNumber: 102
+      Protocol: -1
+      RuleAction: allow
+      CidrBlock: !Sub
+        - "${IpAddress}/32"
+        - { "IpAddress": !GetAtt Vpc1PublicSubnetEC2Instance.PublicIp }
+
+  Vpc2PublicSubnetNetworkAclEntryEgressToGlobalAny:
+    Condition: hasVpc2PublicEc2
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAclId: !Ref Vpc2PublicSubnetNetworkAcl
+      Egress: true
+      RuleNumber: 102
+      Protocol: -1
       RuleAction: allow
       CidrBlock: !Sub
         - "${IpAddress}/32"
         - { "IpAddress": !GetAtt Vpc1PublicSubnetEC2Instance.PublicIp }
 
   # Network ACL for S3 Gateway
-  Vpc2PublicSubnetNetworkAclEntryEgressForS3Gateway:
-    Condition: hasPublicS3Gateway
-    Type: AWS::EC2::NetworkAclEntry
-    Properties:
-      NetworkAclId: !Ref Vpc2PublicSubnetNetworkAcl
-      Egress: true
-      RuleNumber: 101
-      Protocol: 6
-      PortRange:
-        From: 443
-        To: 443
-      RuleAction: allow
-      CidrBlock: "0.0.0.0/0"
-
   Vpc2PublicSubnetNetworkAclEntryIngressForS3Gateway:
-    Condition: hasPublicS3Gateway
+    Condition: hasVpc2PublicS3Gateway
     Type: AWS::EC2::NetworkAclEntry
     Properties:
       NetworkAclId: !Ref Vpc2PublicSubnetNetworkAcl
       Egress: false
-      RuleNumber: 101
+      RuleNumber: 199
       Protocol: 6
       PortRange:
         From: 1024
@@ -799,84 +838,25 @@ Resources:
       RuleAction: allow
       CidrBlock: "0.0.0.0/0"
 
-  ##############################################################################
-  # EndPoint for VPC2
-  ##############################################################################
-  Vpc2SecurityGroupForEndPoint:
-    Condition: hasEc2
-    Type: AWS::EC2::SecurityGroup
+  Vpc2PublicSubnetNetworkAclEntryEgressForS3Gateway:
+    Condition: hasVpc2PublicS3Gateway
+    Type: AWS::EC2::NetworkAclEntry
     Properties:
-      GroupName: !Sub "${AWS::StackName}-Vpc2-ForEndPoint"
-      GroupDescription: !Sub "Generated by ${AWS::StackName}"
-      SecurityGroupEgress:
-        - Description: "Allow HTTPS from Endpoint to VPC2"
-          CidrIp: !Ref Vpc2CidrBlock
-          IpProtocol: tcp
-          FromPort: 443
-          ToPort: 443
-      VpcId: !Ref Vpc2
-      Tags:
-        - Key: Name
-          Value: !Sub "${AWS::StackName}-Vpc2-ForEndPoint"
-
-  Vpc2EndPointForSsm:
-    Condition: hasEc2
-    Type: AWS::EC2::VPCEndpoint
-    Properties:
-      ServiceName: !Sub "com.amazonaws.${AWS::Region}.ssm"
-      SecurityGroupIds:
-        - !GetAtt Vpc2SecurityGroupForEndPoint.GroupId
-      SubnetIds:
-        - !Ref Vpc2PublicSubnet
-        - !Ref Vpc2PrivateSubnet
-      VpcEndpointType: "Interface"
-      PrivateDnsEnabled: true
-      VpcId: !Ref Vpc2
-
-  Vpc2EndPointForSsmMessages:
-    Condition: hasEc2
-    Type: AWS::EC2::VPCEndpoint
-    Properties:
-      ServiceName: !Sub "com.amazonaws.${AWS::Region}.ssmmessages"
-      SecurityGroupIds:
-        - !GetAtt Vpc2SecurityGroupForEndPoint.GroupId
-      SubnetIds:
-        - !Ref Vpc2PublicSubnet
-        - !Ref Vpc2PrivateSubnet
-      VpcEndpointType: "Interface"
-      PrivateDnsEnabled: true
-      VpcId: !Ref Vpc2
-
-  Vpc2EndPointForEc2Messages:
-    Condition: hasEc2
-    Type: AWS::EC2::VPCEndpoint
-    Properties:
-      ServiceName: !Sub "com.amazonaws.${AWS::Region}.ec2messages"
-      SecurityGroupIds:
-        - !GetAtt Vpc2SecurityGroupForEndPoint.GroupId
-      SubnetIds:
-        - !Ref Vpc2PublicSubnet
-        - !Ref Vpc2PrivateSubnet
-      VpcEndpointType: "Interface"
-      PrivateDnsEnabled: true
-      VpcId: !Ref Vpc2
-
-  Vpc2EndPointForS3:
-    Condition: hasEc2
-    Type: AWS::EC2::VPCEndpoint
-    Properties:
-      ServiceName: !Sub "com.amazonaws.${AWS::Region}.s3"
-      RouteTableIds:
-        - !Ref Vpc2PublicSubnetRouteTable
-        - !Ref Vpc2PrivateSubnetRouteTable
-      VpcEndpointType: "Gateway"
-      VpcId: !Ref Vpc2
+      NetworkAclId: !Ref Vpc2PublicSubnetNetworkAcl
+      Egress: true
+      RuleNumber: 199
+      Protocol: 6
+      PortRange:
+        From: 443
+        To: 443
+      RuleAction: allow
+      CidrBlock: "0.0.0.0/0"
 
   ##############################################################################
   # EC2 Instance for VPC2 PublicSubnet
   ##############################################################################
   Vpc2PublicSubnetEC2Instance:
-    Condition: hasPublicEc2
+    Condition: hasVpc2PublicEc2
     Type: AWS::EC2::Instance
     Properties:
       ImageId: !Ref AmiId
@@ -894,7 +874,7 @@ Resources:
           Value: !Sub "${AWS::StackName}-Vpc2-PublicSubnet-Instance"
 
   Vpc2PublicSubnetSecurityGroupForEc2:
-    Condition: hasPublicEc2
+    Condition: hasVpc2PublicEc2
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupName: !Sub "${AWS::StackName}-Vpc2-PublicSubnet-ForInstance"
@@ -904,8 +884,9 @@ Resources:
         - Key: Name
           Value: !Sub "${AWS::StackName}-Vpc2-PublicSubnet-ForInstance"
 
+  # Allow Any from VPC2 local
   Vpc2PublicSubnetSecurityGroupIngressForEc2FromLocal:
-    Condition: hasPublicEc2
+    Condition: hasVpc2PublicEc2
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
       GroupId: !GetAtt Vpc2PublicSubnetSecurityGroupForEc2.GroupId
@@ -914,7 +895,7 @@ Resources:
       IpProtocol: -1
 
   Vpc2PublicSubnetSecurityGroupEgressForEc2ToLocal:
-    Condition: hasPublicEc2
+    Condition: hasVpc2PublicEc2
     Type: AWS::EC2::SecurityGroupEgress
     Properties:
       GroupId: !GetAtt Vpc2PublicSubnetSecurityGroupForEc2.GroupId
@@ -922,39 +903,51 @@ Resources:
       CidrIp: !Ref Vpc2CidrBlock
       IpProtocol: -1
 
-  Vpc2PublicSubnetSecurityGroupEgressForEc2ToS3Gateway:
-    Condition: hasPublicS3Gateway
-    Type: AWS::EC2::SecurityGroupEgress
-    Properties:
-      GroupId: !GetAtt Vpc2PublicSubnetSecurityGroupForEc2.GroupId
-      Description: "Allow all traffic from EC2 to S3 Gateway"
-      CidrIp: "0.0.0.0/0"
-      IpProtocol: -1
-
+  # Allow Any from VPC1 local
   Vpc2PublicSubnetSecurityGroupIngressForEc2FromOther:
-    Condition: hasPublicEc2
+    Condition: hasVpc2PublicEc2
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
       GroupId: !GetAtt Vpc2PublicSubnetSecurityGroupForEc2.GroupId
-      Description: "Allow SSH from other VPC to EC2"
+      Description: "Allow all traffic from other VPC to EC2"
       CidrIp: !Ref Vpc1CidrBlock
-      IpProtocol: tcp
-      FromPort: 22
-      ToPort: 22
+      IpProtocol: -1
 
   Vpc2PublicSubnetSecurityGroupEgressForEc2ToOther:
-    Condition: hasPublicEc2
+    Condition: hasVpc2PublicEc2
     Type: AWS::EC2::SecurityGroupEgress
     Properties:
       GroupId: !GetAtt Vpc2PublicSubnetSecurityGroupForEc2.GroupId
-      Description: "Allow SSH from EC2 to other VPC"
+      Description: "Allow all traffic from EC2 to other VPC"
       CidrIp: !Ref Vpc1CidrBlock
-      IpProtocol: tcp
-      FromPort: 22
-      ToPort: 22
+      IpProtocol: -1
 
+  # Allow Any from VPC1 Global IP to VPC1 PublicSubnet
+  Vpc2PublicSubnetSecurityGroupIngressForEc2FromGlobalAny:
+    Condition: hasVpc2PublicEc2
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !GetAtt Vpc2PublicSubnetSecurityGroupForEc2.GroupId
+      Description: "Allow Any from other VPC to EC2"
+      CidrIp: !Sub
+        - "${IpAddress}/32"
+        - { "IpAddress": !GetAtt Vpc1PublicSubnetEC2Instance.PublicIp }
+      IpProtocol: -1
+
+  Vpc2PublicSubnetSecurityGroupEgressForEc2TogAny:
+    Condition: hasVpc2PublicEc2
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId: !GetAtt Vpc2PublicSubnetSecurityGroupForEc2.GroupId
+      Description: "Allow Any from EC2 to other VPC"
+      CidrIp: !Sub
+        - "${IpAddress}/32"
+        - { "IpAddress": !GetAtt Vpc1PublicSubnetEC2Instance.PublicIp }
+      IpProtocol: -1
+
+  # Security Group Ingress for Endpoint
   Vpc2PublicSubnetSecurityGroupIngressForEndPoint:
-    Condition: hasPublicEc2
+    Condition: hasVpc2PublicEc2
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
       GroupId: !GetAtt Vpc2SecurityGroupForEndPoint.GroupId
@@ -964,11 +957,64 @@ Resources:
       FromPort: 443
       ToPort: 443
 
+  # Allow Any outbound from EC2 to S3 Gateway
+  Vpc2PublicSubnetSecurityGroupEgressForEc2ToS3Gateway:
+    Condition: hasVpc2PublicS3Gateway
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId: !GetAtt Vpc2PublicSubnetSecurityGroupForEc2.GroupId
+      Description: "Allow all traffic from EC2 to S3 Gateway"
+      CidrIp: "0.0.0.0/0"
+      IpProtocol: tcp
+      FromPort: 443
+      ToPort: 443
+
+  ##############################################################################
+  # PrivateSubnet for VPC2
+  ##############################################################################
+  Vpc2PrivateSubnet:
+    Condition: hasVpc2
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: !Ref Vpc2PrivateSubnetCidrBlock
+      VpcId: !Ref Vpc2
+      AvailabilityZone: !Select
+        - 0
+        - !GetAZs ''
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-Vpc2-PrivateSubnet"
+
+  Vpc2PrivateSubnetRouteTable:
+    Condition: hasVpc2
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref Vpc2
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-Vpc2-PrivateSubnet"
+
+  Vpc2PrivateSubnetRouteTableAssociation:
+    Condition: hasVpc2
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref Vpc2PrivateSubnetRouteTable
+      SubnetId: !Ref Vpc2PrivateSubnet
+
+  # PrivateSubnet Default Route to NAT Gateway
+  Vpc2PrivateSubnetDefaultRoute:
+    Condition: hasVpc2
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref Vpc2PrivateSubnetRouteTable
+      DestinationCidrBlock: "0.0.0.0/0"
+      NatGatewayId: !Ref Vpc2PublicSubnetNatGateway
+
   ##############################################################################
   # EC2 Instance for Vpc2 PrivateSubnet
   ##############################################################################
   Vpc2PrivateSubnetEC2Instance:
-    Condition: hasPrivateEc2
+    Condition: hasVpc2PrivateEc2
     Type: AWS::EC2::Instance
     Properties:
       ImageId: !Ref AmiId
@@ -983,7 +1029,7 @@ Resources:
           Value: !Sub "${AWS::StackName}-Vpc2-PrivateSubnet-Instance"
 
   Vpc2PrivateSubnetSecurityGroupForEc2:
-    Condition: hasPrivateEc2
+    Condition: hasVpc2PrivateEc2
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupName: !Sub "${AWS::StackName}-Vpc2-PrivateSubnet-ForInstance"
@@ -993,8 +1039,9 @@ Resources:
         - Key: Name
           Value: !Sub "${AWS::StackName}-Vpc2-PrivateSubnet-ForInstance"
 
+  # Allow Any from VPC2 local
   Vpc2PrivateSubnetSecurityGroupIngressForEc2FromLocal:
-    Condition: hasPrivateEc2
+    Condition: hasVpc2PrivateEc2
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
       GroupId: !GetAtt Vpc2PrivateSubnetSecurityGroupForEc2.GroupId
@@ -1002,28 +1049,37 @@ Resources:
       CidrIp: !Ref Vpc2CidrBlock
       IpProtocol: -1
 
-  Vpc2PrivateSubnetSecurityGroupEgressForEc2:
-    Condition: hasPrivateEc2
+  Vpc2PrivateSubnetSecurityGroupEgressForEc2ToLocal:
+    Condition: hasVpc2PrivateEc2
     Type: AWS::EC2::SecurityGroupEgress
     Properties:
       GroupId: !GetAtt Vpc2PrivateSubnetSecurityGroupForEc2.GroupId
       Description: "Allow all traffic from EC2 to local"
-      CidrIp: "0.0.0.0/0"
+      CidrIp: !Ref Vpc2CidrBlock
       IpProtocol: -1
 
+  # Allow Any from VPC1 local
   Vpc2PrivateSubnetSecurityGroupIngressForEc2FromOther:
-    Condition: hasPrivateEc2
+    Condition: hasVpc2PrivateEc2
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
       GroupId: !GetAtt Vpc2PrivateSubnetSecurityGroupForEc2.GroupId
-      Description: "Allow SSH from other VPC to EC2"
+      Description: "Allow all traffic from other VPC to EC2"
       CidrIp: !Ref Vpc1CidrBlock
-      IpProtocol: tcp
-      FromPort: 22
-      ToPort: 22
+      IpProtocol: -1
 
+  Vpc2PrivateSubnetSecurityGroupEgressForEc2ToOther:
+    Condition: hasVpc2PrivateEc2
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId: !GetAtt Vpc2PrivateSubnetSecurityGroupForEc2.GroupId
+      Description: "Allow all traffic from EC2 to other VPC"
+      CidrIp: !Ref Vpc1CidrBlock
+      IpProtocol: -1
+
+  # Security Group Ingress for Endpoint
   Vpc2PrivateSubnetSecurityGroupIngressForEndPoint:
-    Condition: hasPrivateEc2
+    Condition: hasVpc2PrivateEc2
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
       GroupId: !GetAtt Vpc2SecurityGroupForEndPoint.GroupId
@@ -1032,3 +1088,84 @@ Resources:
       IpProtocol: tcp
       FromPort: 443
       ToPort: 443
+
+  # Allow Any outbound from EC2 to S3 Gateway
+  Vpc2PrivateSubnetSecurityGroupEgressForEc2ToS3Gateway:
+    Condition: hasVpc2PublicS3Gateway
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId: !GetAtt Vpc2PrivateSubnetSecurityGroupForEc2.GroupId
+      Description: "Allow all traffic from EC2 to S3 Gateway"
+      CidrIp: "0.0.0.0/0"
+      IpProtocol: tcp
+      FromPort: 443
+      ToPort: 443
+
+  ##############################################################################
+  # EndPoint for VPC2 (shared between Private Subnet and Public Subnet)
+  ##############################################################################
+  Vpc2SecurityGroupForEndPoint:
+    Condition: hasVpc2Ec2
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub "${AWS::StackName}-Vpc2-ForEndPoint"
+      GroupDescription: !Sub "Generated by ${AWS::StackName}"
+      SecurityGroupEgress:
+        - Description: "Allow HTTPS from Endpoint to VPC2"
+          CidrIp: !Ref Vpc2CidrBlock
+          IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+      VpcId: !Ref Vpc2
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-Vpc2-ForEndPoint"
+
+  Vpc2EndPointForSsm:
+    Condition: hasVpc2Ec2
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.ssm"
+      SecurityGroupIds:
+        - !GetAtt Vpc2SecurityGroupForEndPoint.GroupId
+      SubnetIds:
+        - !Ref Vpc2PrivateSubnet
+      VpcEndpointType: "Interface"
+      PrivateDnsEnabled: true
+      VpcId: !Ref Vpc2
+
+  Vpc2EndPointForSsmMessages:
+    Condition: hasVpc2Ec2
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.ssmmessages"
+      SecurityGroupIds:
+        - !GetAtt Vpc2SecurityGroupForEndPoint.GroupId
+      SubnetIds:
+        - !Ref Vpc2PrivateSubnet
+      VpcEndpointType: "Interface"
+      PrivateDnsEnabled: true
+      VpcId: !Ref Vpc2
+
+  Vpc2EndPointForEc2Messages:
+    Condition: hasVpc2Ec2
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.ec2messages"
+      SecurityGroupIds:
+        - !GetAtt Vpc2SecurityGroupForEndPoint.GroupId
+      SubnetIds:
+        - !Ref Vpc2PrivateSubnet
+      VpcEndpointType: "Interface"
+      PrivateDnsEnabled: true
+      VpcId: !Ref Vpc2
+
+  Vpc2EndPointForS3:
+    Condition: hasVpc2Ec2
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.s3"
+      RouteTableIds:
+        - !Ref Vpc2PrivateSubnetRouteTable
+      VpcEndpointType: "Gateway"
+      VpcId: !Ref Vpc2
