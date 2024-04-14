@@ -202,16 +202,6 @@ Resources:
         - { "IpAddress": !GetAtt Vpc2PublicSubnetEip.PublicIp }
       GatewayId: !Ref Vpc1InternetGateway
 
-  Vpc1PublicSubnetNatGateway:
-    Type: AWS::EC2::NatGateway
-    Properties:
-      ConnectivityType: private
-      PrivateIpAddress: !Ref Vpc1PublicSubnetNatGatewayIp
-      SubnetId: !Ref Vpc1PublicSubnet
-      Tags:
-        - Key: Name
-          Value: !Sub "${AWS::StackName}-Vpc1-PublicSubnet"
-
   ##############################################################################
   # Network ACL for VPC1 PublicSubnet
   ##############################################################################
@@ -343,6 +333,7 @@ Resources:
           GroupSet:
             - !GetAtt Vpc1PublicSubnetSecurityGroupForEc2.GroupId
           SubnetId: !Ref Vpc1PublicSubnet
+          PrivateIpAddress: !Ref Vpc1PublicSubnetNatGatewayIp
       IamInstanceProfile: !Ref InstanceProfile
       Tags:
         - Key: "Name"
@@ -358,6 +349,7 @@ Resources:
           Value: !Sub "${AWS::StackName}-Vpc1-PublicSubnet-EC2"
 
   Vpc1PublicSubnetEipAssociation:
+    Condition: hasPublicEc2
     Type: AWS::EC2::EIPAssociation
     Properties:
       InstanceId: !Ref Vpc1PublicSubnetEC2Instance
@@ -490,11 +482,12 @@ Resources:
 
   # PrivateSubnet Default Route to NAT Gateway
   Vpc1PrivateSubnetDefaultRoute:
+    Condition: hasPublicEc2
     Type: AWS::EC2::Route
     Properties:
       RouteTableId: !Ref Vpc1PrivateSubnetRouteTable
       DestinationCidrBlock: "0.0.0.0/0"
-      NatGatewayId: !Ref Vpc1PublicSubnetNatGateway
+      InstanceId: !Ref Vpc1PublicSubnetEC2Instance
 
   ##############################################################################
   # EC2 Instance for VPC1 PrivateSubnet
@@ -736,17 +729,6 @@ Resources:
         - { "IpAddress": !GetAtt Vpc1PublicSubnetEip.PublicIp }
       GatewayId: !Ref Vpc2InternetGateway
 
-  Vpc2PublicSubnetNatGateway:
-    Condition: hasVpc2
-    Type: AWS::EC2::NatGateway
-    Properties:
-      ConnectivityType: private
-      PrivateIpAddress: !Ref Vpc2PublicSubnetNatGatewayIp
-      SubnetId: !Ref Vpc2PublicSubnet
-      Tags:
-        - Key: Name
-          Value: !Sub "${AWS::StackName}-Vpc2-PublicSubnet"
-
   ##############################################################################
   # Network ACL for VPC2 PublicSubnet
   ##############################################################################
@@ -884,6 +866,7 @@ Resources:
           GroupSet:
             - !GetAtt Vpc2PublicSubnetSecurityGroupForEc2.GroupId
           SubnetId: !Ref Vpc2PublicSubnet
+          PrivateIpAddress: !Ref Vpc2PublicSubnetNatGatewayIp
       IamInstanceProfile: !Ref InstanceProfile
       Tags:
         - Key: "Name"
@@ -899,6 +882,7 @@ Resources:
           Value: !Sub "${AWS::StackName}-Vpc2-PublicSubnet-EC2"
 
   Vpc2PublicSubnetEipAssociation:
+    Condition: hasPublicEc2
     Type: AWS::EC2::EIPAssociation
     Properties:
       InstanceId: !Ref Vpc2PublicSubnetEC2Instance
@@ -1034,12 +1018,12 @@ Resources:
 
   # PrivateSubnet Default Route to NAT Gateway
   Vpc2PrivateSubnetDefaultRoute:
-    Condition: hasVpc2
+    Condition: hasVpc2PublicEc2
     Type: AWS::EC2::Route
     Properties:
       RouteTableId: !Ref Vpc2PrivateSubnetRouteTable
       DestinationCidrBlock: "0.0.0.0/0"
-      NatGatewayId: !Ref Vpc2PublicSubnetNatGateway
+      InstanceId: !Ref Vpc2PublicSubnetEC2Instance
 
   ##############################################################################
   # EC2 Instance for Vpc2 PrivateSubnet
