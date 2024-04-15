@@ -34,18 +34,10 @@ Parameters:
     Type: String
     Description: VPC2 PublicSubnets CidrBlock
     Default: 172.16.1.0/28
-  Vpc2GatewaySubnetCidrBlock:
-    Type: String
-    Description: VPC2 GatewaySubnet CidrBlock
-    Default: 172.16.1.16/28
   Vpc2PrivateSubnetCidrBlock:
     Type: String
     Description: VPC2 PrivateSubnet CidrBlock
     Default: 172.16.1.32/28
-  Vpc2GatewaySubnetNatGatewayIp:
-    Type: String
-    Description: VPC2 PublicSubnets NAT Gateway IP
-    Default: 172.16.1.20
   KeyName:
     Description: SSH Key Name
     Type: AWS::EC2::KeyPair::KeyName
@@ -714,8 +706,6 @@ Resources:
   #  - VPC2 InternetGateway
   #  - VPC2 PublicSubnet
   #    - VPC2 PublicSubnet EC2 VPN Gateway
-  #  - VPC2 GatewaySubnet
-  #    - VPC2 GatewaySubnet NAT Gateway
   #  - VPC2 PrivateSubnet
   #    - VPC2 PrivateSubnet EC2 Instance
   ##############################################################################
@@ -1048,58 +1038,6 @@ Resources:
       ToPort: 443
 
   ##############################################################################
-  # GatewaySubnet for VPC2
-  ##############################################################################
-  Vpc2GatewaySubnet:
-    Condition: hasVpc2
-    Type: AWS::EC2::Subnet
-    Properties:
-      CidrBlock: !Ref Vpc2GatewaySubnetCidrBlock
-      VpcId: !Ref Vpc2
-      AvailabilityZone: !Select
-        - 0
-        - !GetAZs ''
-      Tags:
-        - Key: Name
-          Value: !Sub "${AWS::StackName}-Vpc2-GatewaySubnet"
-
-  Vpc2GatewaySubnetRouteTable:
-    Condition: hasVpc2
-    Type: AWS::EC2::RouteTable
-    Properties:
-      VpcId: !Ref Vpc2
-      Tags:
-        - Key: Name
-          Value: !Sub "${AWS::StackName}-Vpc2-GatewaySubnet"
-
-  Vpc2GatewaySubnetRouteTableAssociation:
-    Condition: hasVpc2
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties:
-      RouteTableId: !Ref Vpc2GatewaySubnetRouteTable
-      SubnetId: !Ref Vpc2GatewaySubnet
-
-  # GatewaySubnet Default Route to EC2 VPN Gateway
-  Vpc2GatewaySubnetDefaultRoute:
-    Condition: hasVpc2PublicEc2
-    Type: AWS::EC2::Route
-    Properties:
-      RouteTableId: !Ref Vpc2GatewaySubnetRouteTable
-      DestinationCidrBlock: "0.0.0.0/0"
-      InstanceId: !Ref Vpc2PublicSubnetEC2Instance
-
-  Vpc2GatewaySubnetNatGateway:
-    Condition: hasVpc2
-    Type: AWS::EC2::NatGateway
-    Properties:
-      ConnectivityType: private
-      PrivateIpAddress: !Ref Vpc2GatewaySubnetNatGatewayIp
-      SubnetId: !Ref Vpc2GatewaySubnet
-      Tags:
-        - Key: Name
-          Value: !Sub "${AWS::StackName}-Vpc2-GatewaySubnet-NatGateway"
-
-  ##############################################################################
   # PrivateSubnet for VPC2
   ##############################################################################
   Vpc2PrivateSubnet:
@@ -1133,12 +1071,12 @@ Resources:
 
   # PrivateSubnet Default Route to NAT Gateway
   Vpc2PrivateSubnetDefaultRoute:
-    Condition: hasVpc2
+    Condition: hasVpc2PublicEc2
     Type: AWS::EC2::Route
     Properties:
       RouteTableId: !Ref Vpc2PrivateSubnetRouteTable
       DestinationCidrBlock: "0.0.0.0/0"
-      NatGatewayId: !Ref Vpc2GatewaySubnetNatGateway
+      InstanceId: !Ref Vpc2PublicSubnetEC2Instance
 
   ##############################################################################
   # EC2 Instance for Vpc2 PrivateSubnet

@@ -4,15 +4,15 @@
 
 ### VPC1
 
-| Type       | LogicalId                    | CIDR            | Remarks |
-|------------|------------------------------|-----------------|---------|
-| VPC        | Vpc1                         | 172.16.0.0/24   |         |
-| Subnet     | Vpc1PrivateSubnet            | 172.16.0.0/28   |         |
-| Subnet     | Vpc1PublicSubnet             | 172.16.0.16/28  |         |
-| NatGateway | Vpc1PublicSubnetNatGateway   | 172.16.0.20/32  |         |
-| EIP        | Vpc1PublicSubnetEIP          | 35.74.93.127/32 |         |
-| EC2        | Vpc1PublicSubnetEC2Instance  |                 |         |
-| EC2        | Vpc1PrivateSubnetEC2Instance |                 |         |
+| Type       | LogicalId                    | CIDR              | Remarks |
+|------------|------------------------------|-------------------|---------|
+| VPC        | Vpc1                         | 172.16.0.0/24     |         |
+| Subnet     | Vpc1PrivateSubnet            | 172.16.0.0/28     |         |
+| Subnet     | Vpc1PublicSubnet             | 172.16.0.16/28    |         |
+| NatGateway | Vpc1PublicSubnetNatGateway   | 172.16.0.20/32    |         |
+| EIP        | Vpc1PublicSubnetEIP          | 54.250.192.221/32 |         |
+| EC2        | Vpc1PublicSubnetEC2Instance  |                   |         |
+| EC2        | Vpc1PrivateSubnetEC2Instance |                   |         |
 
 ### VPC2
 
@@ -22,7 +22,7 @@
 | Subnet     | Vpc2PrivateSubnet            | 172.16.1.0/28   |         |
 | Subnet     | Vpc2PublicSubnet             | 172.16.1.16/28  |         |
 | NatGateway | Vpc2PublicSubnetNatGateway   | 172.16.1.20/32  |         |
-| EIP        | Vpc2PublicSubnetEIP          | 18.178.9.196/32 |         |
+| EIP        | Vpc2PublicSubnetEIP          | 54.95.174.76/32 |         |
 | EC2        | Vpc2PublicSubnetEC2Instance  |                 |         |
 | EC2        | Vpc2PrivateSubnetEC2Instance |                 |         |
 
@@ -37,6 +37,7 @@ sudo su -
 再起動しても大丈夫なように設定ファイルの値を変更する
 
 ```text:/etc/sysctl.d/99-sysctl.conf
+cat << EOF >> /etc/sysctl.d/99-sysctl.conf
 net.ipv4.ip_forward=1
 
 net.ipv4.conf.all.arp_ignore=1
@@ -57,6 +58,7 @@ net.ipv4.conf.all.rp_filter=0
 net.ipv4.conf.default.rp_filter=0
 net.ipv4.conf.enX0.rp_filter=0
 net.ipv4.conf.lo.rp_filter=0
+EOF
 ```
 
 再起動して以下のコマンドで設定を確認
@@ -183,10 +185,10 @@ Libreswan 4.12
 cat << EOF > /etc/ipsec.d/net1.conf
 conn net1
     left=%defaultroute
-    leftid=52.192.155.179
+    leftid=54.250.192.221
     leftsubnet=172.16.0.0/24
-    right=46.51.234.28
-    rightid=46.51.234.28
+    right=54.95.174.76
+    rightid=54.95.174.76
     rightsubnet=172.16.1.0/24
     type=tunnel
     auto=start
@@ -207,7 +209,7 @@ EOF
 cat << EOF > /etc/ipsec.d/net1.conf
 conn net1
     left=%defaultroute
-    leftid=46.51.234.28
+    leftid=54.95.174.76
     leftsubnet=172.16.1.0/24
     right=%any
     rightid=%any
@@ -495,21 +497,20 @@ Installed:
 Complete!
 ```
 
-
-
 ```bash
 ptables -t nat -A POSTROUTING -s 172.168.0.0/24 -o etX0 -j MASQUERADE
 ```
-
 
 ## 接続確認
 
 | From         | Host                                           | VPC1-Private | VPC1-Public | VPC2-Public | VPC2-Private |
 |--------------|------------------------------------------------|--------------|-------------|-------------|--------------|
-| VPC1-Private | ip-172-16-0-36.ap-northeast-1.compute.internal | ◯            | ◯           | ◯           | ◯            |
-| VPC1-Public  | ip-172-16-0-5.ap-northeast-1.compute.internal  | ◯            | ◯           | ◯           | ◯            |
-| VPC2-Public  | ip-172-16-1-10.ap-northeast-1.compute.internal | ◯            | ◯           | ◯           | ◯            |
-| VPC2-Private | ip-172-16-1-41.ap-northeast-1.compute.internal | -            | -           | ◯           | ◯            |
+| VPC1-Private | ip-172-16-0-43.ap-northeast-1.compute.internal | ◯            | ◯           | ◯(NAT)      | ◯(NAT)       |
+| VPC1-Public  | ip-172-16-0-14.ap-northeast-1.compute.internal | ◯            | ◯           | ◯           | ◯            |
+| VPC2-Public  | ip-172-16-1-12.ap-northeast-1.compute.internal | ◯            | ◯           | ◯           | ◯            |
+| VPC2-Private | ip-172-16-1-45.ap-northeast-1.compute.internal | -            | -           | ◯           | ◯            |
+
+VPC1にだけNAT Gatewayを挟んだのでVPC1-PrivateのVPC2へのアクセスがNAT(172.16.0.20)される。
 
 ## 参考
 
