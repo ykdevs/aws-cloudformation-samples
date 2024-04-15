@@ -179,13 +179,14 @@ Libreswan 4.12
 
 ### VPC1 EC2
 
-```text:/etc/ipsec.d/net1.conf
+```text:
+cat << EOF > /etc/ipsec.d/net1.conf
 conn net1
     left=%defaultroute
-    leftid=35.74.93.127
+    leftid=52.192.155.179
     leftsubnet=172.16.0.0/24
-    right=18.178.9.196
-    rightid=18.178.9.196
+    right=46.51.234.28
+    rightid=46.51.234.28
     rightsubnet=172.16.1.0/24
     type=tunnel
     auto=start
@@ -197,14 +198,16 @@ conn net1
     salifetime=24h
     ike=aes128-sha1-modp2048
     phase2alg=aes128-sha1
+EOF
 ```
 
 #### VPC2 EC2
 
-```text:/etc/ipsec.d/net1.conf
+```text:
+cat << EOF > /etc/ipsec.d/net1.conf
 conn net1
     left=%defaultroute
-    leftid=18.178.9.196
+    leftid=46.51.234.28
     leftsubnet=172.16.1.0/24
     right=%any
     rightid=%any
@@ -219,14 +222,17 @@ conn net1
     salifetime=24h
     ike=aes128-sha1-modp2048
     phase2alg=aes128-sha1
+EOF
 ```
 
 ### PSK(Pre-Shared Key)の設定
 
 32byteの乱数を設定する
 
-```text:/etc/ipsec.d/net1.secrets
+```text:
+cat << EOF > /etc/ipsec.d/net1.secrets
 %any : PSK "sRkkJ7sfczXi2BH1WzUnxRiJiLtNFPxO"
+EOF
 ```
 
 ### 起動
@@ -370,6 +376,141 @@ Apr 14 17:06:40 ip-172-16-0-27.ap-northeast-1.compute.internal pluto[30497]: "ne
 Apr 14 17:06:40 ip-172-16-0-27.ap-northeast-1.compute.internal pluto[30497]: "net1": failed to initiate connection
 ```
 
+## iptablesの設定
+
+```bash
+[root@ip-172-16-0-20 ~]# sudo dnf install iptables
+Last metadata expiration check: 1:01:18 ago on Sun Apr 14 21:35:43 2024.
+Dependencies resolved.
+=============================================================================================================================================================================================================================================================================================================================
+ Package                                                                             Architecture                                                        Version                                                                              Repository                                                                Size
+=============================================================================================================================================================================================================================================================================================================================
+Installing:
+ iptables-nft                                                                        x86_64                                                              1.8.8-3.amzn2023.0.2                                                                 amazonlinux                                                              183 k
+Installing dependencies:
+ iptables-libs                                                                       x86_64                                                              1.8.8-3.amzn2023.0.2                                                                 amazonlinux                                                              401 k
+ libnetfilter_conntrack                                                              x86_64                                                              1.0.8-2.amzn2023.0.2                                                                 amazonlinux                                                               58 k
+ libnfnetlink                                                                        x86_64                                                              1.0.1-19.amzn2023.0.2                                                                amazonlinux                                                               30 k
+ libnftnl                                                                            x86_64                                                              1.2.2-2.amzn2023.0.2                                                                 amazonlinux                                                               84 k
+
+Transaction Summary
+=============================================================================================================================================================================================================================================================================================================================
+Install  5 Packages
+
+Total download size: 755 k
+Installed size: 2.8 M
+Is this ok [y/N]: y
+Downloading Packages:
+(1/5): libnfnetlink-1.0.1-19.amzn2023.0.2.x86_64.rpm                                                                                                                                                                                                                                         377 kB/s |  30 kB     00:00
+(2/5): iptables-libs-1.8.8-3.amzn2023.0.2.x86_64.rpm                                                                                                                                                                                                                                         4.3 MB/s | 401 kB     00:00
+(3/5): iptables-nft-1.8.8-3.amzn2023.0.2.x86_64.rpm                                                                                                                                                                                                                                          1.6 MB/s | 183 kB     00:00
+(4/5): libnetfilter_conntrack-1.0.8-2.amzn2023.0.2.x86_64.rpm                                                                                                                                                                                                                                2.8 MB/s |  58 kB     00:00
+(5/5): libnftnl-1.2.2-2.amzn2023.0.2.x86_64.rpm                                                                                                                                                                                                                                              2.3 MB/s |  84 kB     00:00
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Total                                                                                                                                                                                                                                                                                        3.6 MB/s | 755 kB     00:00
+Running transaction check
+Transaction check succeeded.
+Running transaction test
+Transaction test succeeded.
+Running transaction
+  Preparing        :                                                                                                                                                                                                                                                                                                     1/1
+  Installing       : libnftnl-1.2.2-2.amzn2023.0.2.x86_64                                                                                                                                                                                                                                                                1/5
+  Installing       : libnfnetlink-1.0.1-19.amzn2023.0.2.x86_64                                                                                                                                                                                                                                                           2/5
+  Installing       : libnetfilter_conntrack-1.0.8-2.amzn2023.0.2.x86_64                                                                                                                                                                                                                                                  3/5
+  Installing       : iptables-libs-1.8.8-3.amzn2023.0.2.x86_64                                                                                                                                                                                                                                                           4/5
+  Installing       : iptables-nft-1.8.8-3.amzn2023.0.2.x86_64                                                                                                                                                                                                                                                            5/5
+  Running scriptlet: iptables-nft-1.8.8-3.amzn2023.0.2.x86_64                                                                                                                                                                                                                                                            5/5
+  Verifying        : libnfnetlink-1.0.1-19.amzn2023.0.2.x86_64                                                                                                                                                                                                                                                           1/5
+  Verifying        : iptables-libs-1.8.8-3.amzn2023.0.2.x86_64                                                                                                                                                                                                                                                           2/5
+  Verifying        : iptables-nft-1.8.8-3.amzn2023.0.2.x86_64                                                                                                                                                                                                                                                            3/5
+  Verifying        : libnftnl-1.2.2-2.amzn2023.0.2.x86_64                                                                                                                                                                                                                                                                4/5
+  Verifying        : libnetfilter_conntrack-1.0.8-2.amzn2023.0.2.x86_64                                                                                                                                                                                                                                                  5/5
+=============================================================================================================================================================================================================================================================================================================================
+WARNING:
+  A newer release of "Amazon Linux" is available.
+
+  Available Versions:
+
+  Version 2023.3.20240131:
+    Run the following command to upgrade to 2023.3.20240131:
+
+      dnf upgrade --releasever=2023.3.20240131
+
+    Release notes:
+     https://docs.aws.amazon.com/linux/al2023/release-notes/relnotes-2023.3.20240131.html
+
+  Version 2023.3.20240205:
+    Run the following command to upgrade to 2023.3.20240205:
+
+      dnf upgrade --releasever=2023.3.20240205
+
+    Release notes:
+     https://docs.aws.amazon.com/linux/al2023/release-notes/relnotes-2023.3.20240205.html
+
+  Version 2023.3.20240219:
+    Run the following command to upgrade to 2023.3.20240219:
+
+      dnf upgrade --releasever=2023.3.20240219
+
+    Release notes:
+     https://docs.aws.amazon.com/linux/al2023/release-notes/relnotes-2023.3.20240219.html
+
+  Version 2023.3.20240304:
+    Run the following command to upgrade to 2023.3.20240304:
+
+      dnf upgrade --releasever=2023.3.20240304
+
+    Release notes:
+     https://docs.aws.amazon.com/linux/al2023/release-notes/relnotes-2023.3.20240304.html
+
+  Version 2023.3.20240312:
+    Run the following command to upgrade to 2023.3.20240312:
+
+      dnf upgrade --releasever=2023.3.20240312
+
+    Release notes:
+     https://docs.aws.amazon.com/linux/al2023/release-notes/relnotes-2023.3.20240312.html
+
+  Version 2023.4.20240319:
+    Run the following command to upgrade to 2023.4.20240319:
+
+      dnf upgrade --releasever=2023.4.20240319
+
+    Release notes:
+     https://docs.aws.amazon.com/linux/al2023/release-notes/relnotes-2023.4.20240319.html
+
+  Version 2023.4.20240401:
+    Run the following command to upgrade to 2023.4.20240401:
+
+      dnf upgrade --releasever=2023.4.20240401
+
+    Release notes:
+     https://docs.aws.amazon.com/linux/al2023/release-notes/relnotes-2023.4.20240401.html
+
+=============================================================================================================================================================================================================================================================================================================================
+
+Installed:
+  iptables-libs-1.8.8-3.amzn2023.0.2.x86_64                     iptables-nft-1.8.8-3.amzn2023.0.2.x86_64                     libnetfilter_conntrack-1.0.8-2.amzn2023.0.2.x86_64                     libnfnetlink-1.0.1-19.amzn2023.0.2.x86_64                     libnftnl-1.2.2-2.amzn2023.0.2.x86_64
+
+Complete!
+```
+
+
+
+```bash
+ptables -t nat -A POSTROUTING -s 172.168.0.0/24 -o etX0 -j MASQUERADE
+```
+
+
+## 接続確認
+
+| From         | Host                                           | VPC1-Private | VPC1-Public | VPC2-Public | VPC2-Private |
+|--------------|------------------------------------------------|--------------|-------------|-------------|--------------|
+| VPC1-Private | ip-172-16-0-36.ap-northeast-1.compute.internal | ◯            | ◯           | ◯           | ◯            |
+| VPC1-Public  | ip-172-16-0-5.ap-northeast-1.compute.internal  | ◯            | ◯           | ◯           | ◯            |
+| VPC2-Public  | ip-172-16-1-10.ap-northeast-1.compute.internal | ◯            | ◯           | ◯           | ◯            |
+| VPC2-Private | ip-172-16-1-41.ap-northeast-1.compute.internal | -            | -           | ◯           | ◯            |
+
 ## 参考
 
 - [動的パブリックIPが割当てられたルータとAmazon VPCのVPN接続](https://qiita.com/aquaviter/items/dd55fa6429755e07ac20)
@@ -382,3 +523,5 @@ Apr 14 17:06:40 ip-172-16-0-27.ap-northeast-1.compute.internal pluto[30497]: "ne
 - [IPsec 相互接続の手引き](https://www.rtpro.yamaha.co.jp/RT/docs/ipsec/interop.html)
 - [Libreswan](https://docs.oracle.com/ja-jp/iaas/Content/Network/Reference/libreswanCPE.htm)
 - [IPSec のアルゴリズムとプロトコルについて](https://www.watchguard.com/help/docs/fireware/12/ja-JP/Content/ja-JP/mvpn/general/ipsec_algorithms_protocols_c.html)
+
+[Oracle Cloud：Oracle Cloud と AWS を IPSec VPN(Libreswan)でマルチクラウド接続してみてみた](https://qiita.com/shirok/items/a0848df3d3d67fccd4f9)
