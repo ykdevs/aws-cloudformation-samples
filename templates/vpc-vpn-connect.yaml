@@ -45,6 +45,10 @@ Parameters:
     Type: String
     Description: AMI-ID for EC2
     Default: ami-05a03e6058638183d
+  VpnGatewayAmiId:
+    Type: String
+    Description: AMI-ID for VpnGateway
+    Default: ami-09f7792b0bc1f091e
   HasVpc2:
     Type: String
     Description: Whether to create VPC2 or not
@@ -57,7 +61,7 @@ Parameters:
     AllowedValues:
       - "true"
       - "false"
-  HasPublicEc2:
+  HasPublicVpnGateway:
     Type: String
     Description: Whether to create EC2 instance or not
     AllowedValues:
@@ -73,12 +77,12 @@ Parameters:
 Conditions:
   hasVpc2: !Equals [ !Ref HasVpc2, "true" ]
   hasPrivateEc2: !Equals [ !Ref HasPrivateEc2, "true" ]
-  hasPublicEc2: !Equals [ !Ref HasPublicEc2, "true" ]
+  hasPublicVpnGateway: !Equals [ !Ref HasPublicVpnGateway, "true" ]
   hasVpc2PrivateEc2: !And [ Condition: hasVpc2, Condition: hasPrivateEc2 ]
-  hasVpc2PublicEc2: !And [ Condition: hasVpc2, Condition: hasPublicEc2 ]
-  hasEc2: !Or [ Condition: hasPrivateEc2, Condition: hasPublicEc2 ]
+  hasVpc2PublicVpnGateway: !And [ Condition: hasVpc2, Condition: hasPublicVpnGateway ]
+  hasEc2: !Or [ Condition: hasPrivateEc2, Condition: hasPublicVpnGateway ]
   hasVpc2Ec2: !And [ Condition: hasVpc2, Condition: hasEc2 ]
-  hasPublicS3Gateway: !And [!Equals [ !Ref HasPublicS3Gateway, "true" ], Condition: hasPublicEc2]
+  hasPublicS3Gateway: !And [!Equals [ !Ref HasPublicS3Gateway, "true" ], Condition: hasPublicVpnGateway]
   hasVpc2PublicS3Gateway: !And [ Condition: hasVpc2, Condition: hasPublicS3Gateway ]
 
 Resources:
@@ -125,6 +129,7 @@ Resources:
     Condition: hasEc2
     Type: AWS::IAM::InstanceProfile
     Properties:
+      InstanceProfileName: !Sub "${AWS::StackName}-Instance"
       Path: "/"
       Roles:
         - !Ref RoleForInstance
@@ -194,7 +199,7 @@ Resources:
 
   # Allow traffic between VPC1 and VPC2 Global IP
   Vpc1PublicSubnetDefaultRoute:
-    Condition: hasVpc2PublicEc2
+    Condition: hasVpc2PublicVpnGateway
     Type: AWS::EC2::Route
     Properties:
       RouteTableId: !Ref Vpc1PublicSubnetRouteTable
@@ -267,7 +272,7 @@ Resources:
 
   # Allow Any from VPC2 Global IP to VPC1 PublicSubnet
   Vpc1PublicSubnetNetworkAclEntryIngressFromGlobalAny:
-    Condition: hasVpc2PublicEc2
+    Condition: hasVpc2PublicVpnGateway
     Type: AWS::EC2::NetworkAclEntry
     Properties:
       NetworkAclId: !Ref Vpc1PublicSubnetNetworkAcl
@@ -280,7 +285,7 @@ Resources:
         - { "IpAddress": !GetAtt Vpc2PublicSubnetEip.PublicIp }
 
   Vpc1PublicSubnetNetworkAclEntryEgressToGlobalAny:
-    Condition: hasVpc2PublicEc2
+    Condition: hasVpc2PublicVpnGateway
     Type: AWS::EC2::NetworkAclEntry
     Properties:
       NetworkAclId: !Ref Vpc1PublicSubnetNetworkAcl
@@ -324,18 +329,18 @@ Resources:
   ##############################################################################
   # EC2 Instance for VPC1 PublicSubnet
   ##############################################################################
-  Vpc1PublicSubnetEC2Instance:
-    Condition: hasPublicEc2
+  Vpc1PublicSubnetVpnGateway:
+    Condition: hasPublicVpnGateway
     Type: AWS::EC2::Instance
     Properties:
-      ImageId: !Ref AmiId
-      InstanceType: "t2.micro"
+      ImageId: !Ref VpnGatewayAmiId
+      InstanceType: "t2.small"
       KeyName: !Ref KeyName
       NetworkInterfaces:
         - AssociatePublicIpAddress: true
           DeviceIndex: 0
           GroupSet:
-            - !GetAtt Vpc1PublicSubnetSecurityGroupForEc2.GroupId
+            - !GetAtt Vpc1PublicSubnetSecurityGroupForVpnGateway.GroupId
           SubnetId: !Ref Vpc1PublicSubnet
       SourceDestCheck: false
       IamInstanceProfile: !Ref InstanceProfile
@@ -344,7 +349,7 @@ Resources:
           Value: !Sub "${AWS::StackName}-Vpc1-PublicSubnet-VpnGateway"
 
   Vpc1PublicSubnetEip:
-    Condition: hasPublicEc2
+    Condition: hasPublicVpnGateway
     Type: AWS::EC2::EIP
     Properties:
       Domain: vpc
@@ -353,14 +358,14 @@ Resources:
           Value: !Sub "${AWS::StackName}-Vpc1-PublicSubnet-VpnGateway"
 
   Vpc1PublicSubnetEipAssociation:
-    Condition: hasPublicEc2
+    Condition: hasPublicVpnGateway
     Type: AWS::EC2::EIPAssociation
     Properties:
-      InstanceId: !Ref Vpc1PublicSubnetEC2Instance
+      InstanceId: !Ref Vpc1PublicSubnetVpnGateway
       EIP: !Ref Vpc1PublicSubnetEip
 
-  Vpc1PublicSubnetSecurityGroupForEc2:
-    Condition: hasPublicEc2
+  Vpc1PublicSubnetSecurityGroupForVpnGateway:
+    Condition: hasPublicVpnGateway
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupName: !Sub "${AWS::StackName}-Vpc1-PublicSubnet-VpnGateway"
@@ -371,61 +376,61 @@ Resources:
           Value: !Sub "${AWS::StackName}-Vpc1-PublicSubnet-VpnGateway"
 
   # Allow Any from VPC1 local
-  Vpc1PublicSubnetSecurityGroupIngressForEc2FromLocal:
-    Condition: hasPublicEc2
+  Vpc1PublicSubnetSecurityGroupIngressForVpnGatewayFromLocal:
+    Condition: hasPublicVpnGateway
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
-      GroupId: !GetAtt Vpc1PublicSubnetSecurityGroupForEc2.GroupId
-      Description: "Allow all traffic from local to EC2"
+      GroupId: !GetAtt Vpc1PublicSubnetSecurityGroupForVpnGateway.GroupId
+      Description: "Allow all traffic from local to VpnGateway"
       CidrIp: !Ref Vpc1CidrBlock
       IpProtocol: -1
 
-  Vpc1PublicSubnetSecurityGroupEgressForEc2ToLocal:
-    Condition: hasPublicEc2
+  Vpc1PublicSubnetSecurityGroupEgressForVpnGatewayToLocal:
+    Condition: hasPublicVpnGateway
     Type: AWS::EC2::SecurityGroupEgress
     Properties:
-      GroupId: !GetAtt Vpc1PublicSubnetSecurityGroupForEc2.GroupId
-      Description: "Allow all traffic from EC2 to local"
+      GroupId: !GetAtt Vpc1PublicSubnetSecurityGroupForVpnGateway.GroupId
+      Description: "Allow all traffic from VpnGateway to local"
       CidrIp: !Ref Vpc1CidrBlock
       IpProtocol: -1
 
   # Allow Any from VPC2 local
-  Vpc1PublicSubnetSecurityGroupIngressForEc2FromOther:
-    Condition: hasPublicEc2
+  Vpc1PublicSubnetSecurityGroupIngressForVpnGatewayFromOther:
+    Condition: hasPublicVpnGateway
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
-      GroupId: !GetAtt Vpc1PublicSubnetSecurityGroupForEc2.GroupId
-      Description: "Allow all traffic from other VPC to EC2"
+      GroupId: !GetAtt Vpc1PublicSubnetSecurityGroupForVpnGateway.GroupId
+      Description: "Allow all traffic from other VPC to VpnGateway"
       CidrIp: !Ref Vpc2CidrBlock
       IpProtocol: -1
 
-  Vpc1PublicSubnetSecurityGroupEgressForEc2ToOther:
-    Condition: hasPublicEc2
+  Vpc1PublicSubnetSecurityGroupEgressForVpnGatewayToOther:
+    Condition: hasPublicVpnGateway
     Type: AWS::EC2::SecurityGroupEgress
     Properties:
-      GroupId: !GetAtt Vpc1PublicSubnetSecurityGroupForEc2.GroupId
-      Description: "Allow all traffic from EC2 to other VPC"
+      GroupId: !GetAtt Vpc1PublicSubnetSecurityGroupForVpnGateway.GroupId
+      Description: "Allow all traffic from VpnGateway to other VPC"
       CidrIp: !Ref Vpc2CidrBlock
       IpProtocol: -1
 
   # Allow Any from VPC2 Global IP to VPC1 PublicSubnet
-  Vpc1PublicSubnetSecurityGroupIngressForEc2FromGlobalAny:
-    Condition: hasVpc2PublicEc2
+  Vpc1PublicSubnetSecurityGroupIngressForVpnGatewayFromGlobalAny:
+    Condition: hasVpc2PublicVpnGateway
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
-      GroupId: !GetAtt Vpc1PublicSubnetSecurityGroupForEc2.GroupId
-      Description: "Allow Any from other VPC to EC2"
+      GroupId: !GetAtt Vpc1PublicSubnetSecurityGroupForVpnGateway.GroupId
+      Description: "Allow Any from Global IP to VpnGateway"
       CidrIp: !Sub
         - "${IpAddress}/32"
         - { "IpAddress": !GetAtt Vpc2PublicSubnetEip.PublicIp }
       IpProtocol: -1
 
-  Vpc1PublicSubnetSecurityGroupEgressForEc2ToGlobalAny:
-    Condition: hasVpc2PublicEc2
+  Vpc1PublicSubnetSecurityGroupEgressForVpnGatewayToGlobalAny:
+    Condition: hasVpc2PublicVpnGateway
     Type: AWS::EC2::SecurityGroupEgress
     Properties:
-      GroupId: !GetAtt Vpc1PublicSubnetSecurityGroupForEc2.GroupId
-      Description: "Allow Any from EC2 to other VPC"
+      GroupId: !GetAtt Vpc1PublicSubnetSecurityGroupForVpnGateway.GroupId
+      Description: "Allow Any from VpnGateway to Global IP"
       CidrIp: !Sub
         - "${IpAddress}/32"
         - { "IpAddress": !GetAtt Vpc2PublicSubnetEip.PublicIp }
@@ -433,23 +438,23 @@ Resources:
 
   # Security Group Ingress for Endpoint
   Vpc1PublicSubnetSecurityGroupIngressForEndPoint:
-    Condition: hasPublicEc2
+    Condition: hasPublicVpnGateway
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
       GroupId: !GetAtt Vpc1SecurityGroupForEndPoint.GroupId
-      Description: "Allow HTTPS from EC2 to Endpoint"
-      SourceSecurityGroupId: !GetAtt Vpc1PublicSubnetSecurityGroupForEc2.GroupId
+      Description: "Allow HTTPS from VpnGateway to Endpoint"
+      SourceSecurityGroupId: !GetAtt Vpc1PublicSubnetSecurityGroupForVpnGateway.GroupId
       IpProtocol: tcp
       FromPort: 443
       ToPort: 443
 
   # Allow Any outbound from EC2 to S3 Gateway
-  Vpc1PublicSubnetSecurityGroupEgressForEc2ToS3Gateway:
+  Vpc1PublicSubnetSecurityGroupEgressForVpnGatewayToS3Gateway:
     Condition: hasPublicS3Gateway
     Type: AWS::EC2::SecurityGroupEgress
     Properties:
-      GroupId: !GetAtt Vpc1PublicSubnetSecurityGroupForEc2.GroupId
-      Description: "Allow all traffic from EC2 to S3 Gateway"
+      GroupId: !GetAtt Vpc1PublicSubnetSecurityGroupForVpnGateway.GroupId
+      Description: "Allow all traffic from VpnGateway to S3 Gateway"
       CidrIp: "0.0.0.0/0"
       IpProtocol: tcp
       FromPort: 443
@@ -486,12 +491,12 @@ Resources:
 
   # GatewaySubnet Default Route to EC2 VPN Gateway
   Vpc1GatewaySubnetDefaultRoute:
-    Condition: hasPublicEc2
+    Condition: hasPublicVpnGateway
     Type: AWS::EC2::Route
     Properties:
       RouteTableId: !Ref Vpc1GatewaySubnetRouteTable
       DestinationCidrBlock: "0.0.0.0/0"
-      InstanceId: !Ref Vpc1PublicSubnetEC2Instance
+      InstanceId: !Ref Vpc1PublicSubnetVpnGateway
 
   Vpc1GatewaySubnetNatGateway:
     Type: AWS::EC2::NatGateway
@@ -770,7 +775,7 @@ Resources:
 
   # Allow traffic between VPC2 and VPC1 Global IP
   Vpc2PublicSubnetDefaultRoute:
-    Condition: hasVpc2PublicEc2
+    Condition: hasVpc2PublicVpnGateway
     Type: AWS::EC2::Route
     Properties:
       RouteTableId: !Ref Vpc2PublicSubnetRouteTable
@@ -849,7 +854,7 @@ Resources:
 
   # Allow Any from VPC1 Global IP to VPC2 PublicSubnet
   Vpc2PublicSubnetNetworkAclEntryIngressFromGlobalAny:
-    Condition: hasVpc2PublicEc2
+    Condition: hasVpc2PublicVpnGateway
     Type: AWS::EC2::NetworkAclEntry
     Properties:
       NetworkAclId: !Ref Vpc2PublicSubnetNetworkAcl
@@ -862,7 +867,7 @@ Resources:
         - { "IpAddress": !GetAtt Vpc1PublicSubnetEip.PublicIp }
 
   Vpc2PublicSubnetNetworkAclEntryEgressToGlobalAny:
-    Condition: hasVpc2PublicEc2
+    Condition: hasVpc2PublicVpnGateway
     Type: AWS::EC2::NetworkAclEntry
     Properties:
       NetworkAclId: !Ref Vpc2PublicSubnetNetworkAcl
@@ -906,18 +911,18 @@ Resources:
   ##############################################################################
   # EC2 Instance for VPC2 PublicSubnet
   ##############################################################################
-  Vpc2PublicSubnetEC2Instance:
-    Condition: hasVpc2PublicEc2
+  Vpc2PublicSubnetVpnGateway:
+    Condition: hasVpc2PublicVpnGateway
     Type: AWS::EC2::Instance
     Properties:
-      ImageId: !Ref AmiId
-      InstanceType: "t2.micro"
+      ImageId: !Ref VpnGatewayAmiId
+      InstanceType: "t2.small"
       KeyName: !Ref KeyName
       NetworkInterfaces:
         - AssociatePublicIpAddress: true
           DeviceIndex: 0
           GroupSet:
-            - !GetAtt Vpc2PublicSubnetSecurityGroupForEc2.GroupId
+            - !GetAtt Vpc2PublicSubnetSecurityGroupForVpnGateway.GroupId
           SubnetId: !Ref Vpc2PublicSubnet
       SourceDestCheck: false
       IamInstanceProfile: !Ref InstanceProfile
@@ -926,7 +931,7 @@ Resources:
           Value: !Sub "${AWS::StackName}-Vpc2-PublicSubnet-VpnGateway"
 
   Vpc2PublicSubnetEip:
-    Condition: hasVpc2PublicEc2
+    Condition: hasVpc2PublicVpnGateway
     Type: AWS::EC2::EIP
     Properties:
       Domain: vpc
@@ -935,14 +940,14 @@ Resources:
           Value: !Sub "${AWS::StackName}-Vpc2-PublicSubnet-VpnGateway"
 
   Vpc2PublicSubnetEipAssociation:
-    Condition: hasVpc2PublicEc2
+    Condition: hasVpc2PublicVpnGateway
     Type: AWS::EC2::EIPAssociation
     Properties:
-      InstanceId: !Ref Vpc2PublicSubnetEC2Instance
+      InstanceId: !Ref Vpc2PublicSubnetVpnGateway
       EIP: !Ref Vpc2PublicSubnetEip
 
-  Vpc2PublicSubnetSecurityGroupForEc2:
-    Condition: hasVpc2PublicEc2
+  Vpc2PublicSubnetSecurityGroupForVpnGateway:
+    Condition: hasVpc2PublicVpnGateway
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupName: !Sub "${AWS::StackName}-Vpc2-PublicSubnet-VpnGateway"
@@ -953,61 +958,61 @@ Resources:
           Value: !Sub "${AWS::StackName}-Vpc2-PublicSubnet-VpnGateway"
 
   # Allow Any from VPC2 local
-  Vpc2PublicSubnetSecurityGroupIngressForEc2FromLocal:
-    Condition: hasVpc2PublicEc2
+  Vpc2PublicSubnetSecurityGroupIngressForVpnGatewayFromLocal:
+    Condition: hasVpc2PublicVpnGateway
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
-      GroupId: !GetAtt Vpc2PublicSubnetSecurityGroupForEc2.GroupId
-      Description: "Allow all traffic from local to EC2"
+      GroupId: !GetAtt Vpc2PublicSubnetSecurityGroupForVpnGateway.GroupId
+      Description: "Allow all traffic from local to VpnGateway"
       CidrIp: !Ref Vpc2CidrBlock
       IpProtocol: -1
 
-  Vpc2PublicSubnetSecurityGroupEgressForEc2ToLocal:
-    Condition: hasVpc2PublicEc2
+  Vpc2PublicSubnetSecurityGroupEgressForVpnGatewayToLocal:
+    Condition: hasVpc2PublicVpnGateway
     Type: AWS::EC2::SecurityGroupEgress
     Properties:
-      GroupId: !GetAtt Vpc2PublicSubnetSecurityGroupForEc2.GroupId
-      Description: "Allow all traffic from EC2 to local"
+      GroupId: !GetAtt Vpc2PublicSubnetSecurityGroupForVpnGateway.GroupId
+      Description: "Allow all traffic from VpnGateway to local"
       CidrIp: !Ref Vpc2CidrBlock
       IpProtocol: -1
 
   # Allow Any from VPC1 local
-  Vpc2PublicSubnetSecurityGroupIngressForEc2FromOther:
-    Condition: hasVpc2PublicEc2
+  Vpc2PublicSubnetSecurityGroupIngressForVpnGatewayFromOther:
+    Condition: hasVpc2PublicVpnGateway
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
-      GroupId: !GetAtt Vpc2PublicSubnetSecurityGroupForEc2.GroupId
-      Description: "Allow all traffic from other VPC to EC2"
+      GroupId: !GetAtt Vpc2PublicSubnetSecurityGroupForVpnGateway.GroupId
+      Description: "Allow all traffic from other VPC to VpnGateway"
       CidrIp: !Ref Vpc1CidrBlock
       IpProtocol: -1
 
-  Vpc2PublicSubnetSecurityGroupEgressForEc2ToOther:
-    Condition: hasVpc2PublicEc2
+  Vpc2PublicSubnetSecurityGroupEgressForVpnGatewayToOther:
+    Condition: hasVpc2PublicVpnGateway
     Type: AWS::EC2::SecurityGroupEgress
     Properties:
-      GroupId: !GetAtt Vpc2PublicSubnetSecurityGroupForEc2.GroupId
-      Description: "Allow all traffic from EC2 to other VPC"
+      GroupId: !GetAtt Vpc2PublicSubnetSecurityGroupForVpnGateway.GroupId
+      Description: "Allow all traffic from VpnGateway to other VPC"
       CidrIp: !Ref Vpc1CidrBlock
       IpProtocol: -1
 
   # Allow Any from VPC1 Global IP to VPC1 PublicSubnet
-  Vpc2PublicSubnetSecurityGroupIngressForEc2FromGlobalAny:
-    Condition: hasVpc2PublicEc2
+  Vpc2PublicSubnetSecurityGroupIngressForVpnGatewayFromGlobalAny:
+    Condition: hasVpc2PublicVpnGateway
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
-      GroupId: !GetAtt Vpc2PublicSubnetSecurityGroupForEc2.GroupId
-      Description: "Allow Any from other VPC to EC2"
+      GroupId: !GetAtt Vpc2PublicSubnetSecurityGroupForVpnGateway.GroupId
+      Description: "Allow Any from Global IP to VpnGateway"
       CidrIp: !Sub
         - "${IpAddress}/32"
         - { "IpAddress": !GetAtt Vpc1PublicSubnetEip.PublicIp }
       IpProtocol: -1
 
-  Vpc2PublicSubnetSecurityGroupEgressForEc2TogAny:
-    Condition: hasVpc2PublicEc2
+  Vpc2PublicSubnetSecurityGroupEgressForVpnGatewayToGlobalAny:
+    Condition: hasVpc2PublicVpnGateway
     Type: AWS::EC2::SecurityGroupEgress
     Properties:
-      GroupId: !GetAtt Vpc2PublicSubnetSecurityGroupForEc2.GroupId
-      Description: "Allow Any from EC2 to other VPC"
+      GroupId: !GetAtt Vpc2PublicSubnetSecurityGroupForVpnGateway.GroupId
+      Description: "Allow Any from VpnGateway to Global IP"
       CidrIp: !Sub
         - "${IpAddress}/32"
         - { "IpAddress": !GetAtt Vpc1PublicSubnetEip.PublicIp }
@@ -1015,23 +1020,23 @@ Resources:
 
   # Security Group Ingress for Endpoint
   Vpc2PublicSubnetSecurityGroupIngressForEndPoint:
-    Condition: hasVpc2PublicEc2
+    Condition: hasVpc2PublicVpnGateway
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
       GroupId: !GetAtt Vpc2SecurityGroupForEndPoint.GroupId
-      Description: "Allow HTTPS from EC2 to Endpoint"
-      SourceSecurityGroupId: !GetAtt Vpc2PublicSubnetSecurityGroupForEc2.GroupId
+      Description: "Allow HTTPS from VpnGateway to Endpoint"
+      SourceSecurityGroupId: !GetAtt Vpc2PublicSubnetSecurityGroupForVpnGateway.GroupId
       IpProtocol: tcp
       FromPort: 443
       ToPort: 443
 
   # Allow Any outbound from EC2 to S3 Gateway
-  Vpc2PublicSubnetSecurityGroupEgressForEc2ToS3Gateway:
+  Vpc2PublicSubnetSecurityGroupEgressForVpnGatewayToS3Gateway:
     Condition: hasVpc2PublicS3Gateway
     Type: AWS::EC2::SecurityGroupEgress
     Properties:
-      GroupId: !GetAtt Vpc2PublicSubnetSecurityGroupForEc2.GroupId
-      Description: "Allow all traffic from EC2 to S3 Gateway"
+      GroupId: !GetAtt Vpc2PublicSubnetSecurityGroupForVpnGateway.GroupId
+      Description: "Allow all traffic from VpnGateway to S3 Gateway"
       CidrIp: "0.0.0.0/0"
       IpProtocol: tcp
       FromPort: 443
@@ -1071,12 +1076,12 @@ Resources:
 
   # PrivateSubnet Default Route to NAT Gateway
   Vpc2PrivateSubnetDefaultRoute:
-    Condition: hasVpc2PublicEc2
+    Condition: hasVpc2PublicVpnGateway
     Type: AWS::EC2::Route
     Properties:
       RouteTableId: !Ref Vpc2PrivateSubnetRouteTable
       DestinationCidrBlock: "0.0.0.0/0"
-      InstanceId: !Ref Vpc2PublicSubnetEC2Instance
+      InstanceId: !Ref Vpc2PublicSubnetVpnGateway
 
   ##############################################################################
   # EC2 Instance for Vpc2 PrivateSubnet
