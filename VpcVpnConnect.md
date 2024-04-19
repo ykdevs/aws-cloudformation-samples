@@ -240,6 +240,7 @@ EOF
 ### 起動
 
 ```bash
+systemctl stop ipsec
 systemctl start ipsec
 systemctl enable ipsec
 systemctl status ipsec
@@ -526,3 +527,206 @@ VPC1にだけNAT Gatewayを挟んだのでVPC1-PrivateのVPC2へのアクセス�
 - [IPSec のアルゴリズムとプロトコルについて](https://www.watchguard.com/help/docs/fireware/12/ja-JP/Content/ja-JP/mvpn/general/ipsec_algorithms_protocols_c.html)
 
 [Oracle Cloud：Oracle Cloud と AWS を IPSec VPN(Libreswan)でマルチクラウド接続してみてみた](https://qiita.com/shirok/items/a0848df3d3d67fccd4f9)
+
+
+
+## Libreswan3.18に落としてインストール
+
+
+```text:/etc/sysctl.d/99-sysctl.conf
+cat << EOF >> /etc/sysctl.d/99-sysctl.conf
+net.ipv4.ip_forward=1
+
+net.ipv4.conf.all.arp_ignore=1
+net.ipv4.conf.default.arp_ignore=1
+net.ipv4.conf.eth0.arp_ignore=1
+
+net.ipv4.conf.all.send_redirects=0
+net.ipv4.conf.default.send_redirects=0
+net.ipv4.conf.eth0.send_redirects=0
+net.ipv4.conf.lo.send_redirects=0
+
+net.ipv4.conf.all.accept_redirects=0
+net.ipv4.conf.default.accept_redirects=0
+net.ipv4.conf.eth0.accept_redirects=0
+net.ipv4.conf.lo.accept_redirects=0
+
+net.ipv4.conf.all.rp_filter=0
+net.ipv4.conf.default.rp_filter=0
+net.ipv4.conf.eth0.rp_filter=0
+net.ipv4.conf.lo.rp_filter=0
+EOF
+```
+
+
+### VPC1 EC2
+
+```bash
+cat << EOF > /etc/ipsec.d/net1.conf
+config setup
+    interfaces="eth0"
+    klipsdebug=none
+    plutodebug=all
+    plutostderrlog=/var/log/ipseclog
+    nat_traversal=yes
+
+conn net1
+    type=tunnel
+    ikelifetime=28800s
+    salifetime=3600s
+    authby=secret
+    auth=esp
+    ike=aes128-sha1;modp1024
+    phase2alg=aes-128-sha1;modp1024
+    keyexchange=ike
+    aggrmode=yes
+    pfs=no
+    forceencaps=yes
+    auto=start
+    left=%defaultroute
+    leftid=3.113.89.173
+    leftsubnet=172.16.0.0/28
+    right=18.176.227.35
+    rightid=18.176.227.35
+    rightsubnet=172.16.1.0/28
+    dpdaction=restart_by_peer
+    dpdtimeout=10
+    dpddelay=10
+EOF
+```
+
+```bash
+cat << EOF > /etc/ipsec.d/net1.conf
+config setup
+    interfaces="eth0"
+    klipsdebug=none
+    plutodebug=all
+    plutostderrlog=/var/log/ipseclog
+    nat_traversal=yes
+
+conn net1
+    type=tunnel
+    ikelifetime=28800s
+    salifetime=3600s
+    authby=secret
+    auth=esp
+    ike=aes128-sha1;modp1024
+    phase2alg=aes-128-sha1;modp1024
+    keyexchange=ike
+    aggrmode=yes
+    pfs=no
+    forceencaps=yes
+    auto=start
+    left=%defaultroute
+    leftid=18.176.227.35
+    leftsubnet=172.16.1.0/28
+    right=%any
+    rightid=%any
+    rightsubnet=172.16.0.0/28
+    dpdaction=restart_by_peer
+    dpdtimeout=10
+    dpddelay=10
+EOF
+```
+
+
+
+```bash
+
+cat << EOF > net1.conf
+config setup
+    interfaces="eth0"
+    klipsdebug=none
+    plutodebug=all
+    plutostderrlog=/var/log/ipseclog
+    nat_traversal=yes
+
+conn net1
+    type=tunnel
+    ikelifetime=28800s
+    salifetime=3600s
+    authby=secret
+    auth=esp
+    ike=aes128-sha1;modp1024
+    phase2alg=aes-128-sha1;modp1024
+    keyexchange=ike
+    aggrmode=yes
+    pfs=no
+    forceencaps=yes
+    auto=start
+    left=\${LEFT}
+    leftid=\${LEFT_ID}
+    leftsubnet=\${LEFT_SUBNET}
+    right=\${RIGHT_ID}
+    rightid=\${RIGHT_ID}
+    rightsubnet=\${RIGHT_SUBNET}
+    dpdaction=restart_by_peer
+    dpdtimeout=10
+    dpddelay=10
+EOF
+
+export LEFT=%defaultroute
+export LEFT_ID=
+export LEFT_SUBNET=172.16.0.1
+export RIGHT_ID=
+export RIGHT_SUBNET=172.16.0.1
+envsubst < net1.conf > /etc/ipsec.d/net1.conf
+
+cat << EOF > net1.secrets
+%any : PSK "\${PSK}"
+EOF
+
+export PSK=
+envsubst < net1.secrets > /etc/ipsec.d/net1.secrets
+```
+
+
+```bash
+export LEFT=%defaultroute
+export LEFT_ID=3.115.72.40
+export LEFT_SUBNET=172.16.0.0/28
+export RIGHT_ID=35.76.160.9
+export RIGHT_SUBNET=172.16.1.0/28
+
+envsubst < net1.conf > /etc/ipsec.d/net1.conf
+
+export PSK=sRkkJ7sfczXi2BH1WzUnxRiJiLtNFPxO
+
+envsubst < net1.secrets > /etc/ipsec.d/net1.secrets
+```
+
+```bash
+export LEFT=%defaultroute
+export LEFT_ID=35.76.160.9
+export LEFT_SUBNET=172.16.1.0/28
+export RIGHT_ID=%any
+export RIGHT_SUBNET=172.16.0.0/28
+
+envsubst < net1.conf > /etc/ipsec.d/net1.conf
+
+export PSK=sRkkJ7sfczXi2BH1WzUnxRiJiLtNFPxO
+
+envsubst < net1.secrets > /etc/ipsec.d/net1.secrets
+```
+
+```bash
+systemctl enable ipsec
+systemctl stop ipsec
+systemctl start ipsec
+systemctl status ipsec
+```
+
+
+```bash
+export LEFT=%defaultroute
+export LEFT_ID=35.74.113.176
+export LEFT_SUBNET=10.100.85.0/24
+export RIGHT_ID=210.227.29.77
+export RIGHT_SUBNET=210.227.29.88/30
+
+envsubst < net1.conf > /etc/ipsec.d/net1.conf
+
+export PSK=owcsvDRhdfW5V0Mi7U1OeSqNPutlEbJj
+
+envsubst < net1.secrets > /etc/ipsec.d/net1.secrets
+```

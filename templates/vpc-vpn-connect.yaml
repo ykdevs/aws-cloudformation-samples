@@ -48,7 +48,7 @@ Parameters:
   VpnGatewayAmiId:
     Type: String
     Description: AMI-ID for VpnGateway
-    Default: ami-09f7792b0bc1f091e
+    Default: ami-005edfa7e37fa41a4
   HasVpc2:
     Type: String
     Description: Whether to create VPC2 or not
