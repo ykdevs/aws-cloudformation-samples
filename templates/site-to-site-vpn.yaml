@@ -65,9 +65,25 @@ Parameters:
   Vpc2VpnConnectionOutsideIp:
     Type: String
     Description: VPC2 VpnConnection's Ip Address
+  HasVpn2:
+    Type: String
+    Description: Make VPC2 or not
+    Default: "false"
+    AllowedValues:
+      - "true"
+      - "false"
+  HasPrivate:
+    Type: String
+    Description: Make VPC1 Private Instance or not
+    Default: "false"
+    AllowedValues:
+      - "true"
+      - "false"
 
 Conditions:
-  hasVpc2VpnConnection: !Not [!Equals [!Ref Vpc2VpnConnectionOutsideIp, ""]]
+  hasVpn1Private: !Equals [!Ref HasPrivate, "true"]
+  hasVpn2: !Equals [!Ref HasVpn2, "true"]
+  hasVpc2VpnConnection: !And [!Not [!Equals [!Ref Vpc2VpnConnectionOutsideIp, ""]], Condition: hasVpn2]
   hasVpc1VpnConnection: !Not [!Equals [!Ref Vpc1VpnConnectionOutsideIp, ""]]
 
 Resources:
@@ -108,11 +124,11 @@ Resources:
         Version: "2012-10-17"
         Statement:
           - Effect: Allow
+            Action:
+              - "s3:*"
+              - "ssm:GetParameters"
             Resource:
               - "*"
-            Action:
-              - s3:*
-              - ssm:GetParameters
       Roles:
         - !Ref RoleForInstance
 
@@ -188,6 +204,7 @@ Resources:
       SubnetId: !Ref Vpc1Subnet2
 
   Vpc1Subnet2NatGateway:
+    Condition: hasVpn1Private
     Type: AWS::EC2::NatGateway
     Properties:
       ConnectivityType: private
@@ -198,6 +215,7 @@ Resources:
           Value: !Sub "${AWS::StackName}-Vpc1-Subnet2-NatGateway"
 
   Vpc1RouteFromVpc1Subnet1ToNatGateway:
+    Condition: hasVpn1Private
     Type: AWS::EC2::Route
     Properties:
       RouteTableId: !Ref Vpc1Subnet1RouteTable
@@ -219,6 +237,7 @@ Resources:
           Value: !Sub "${AWS::StackName}-Vpc1-Subnet1-Instance1"
 
   Vpc1Subnet2EC2Instance:
+    Condition: hasVpn1Private
     Type: AWS::EC2::Instance
     Properties:
       ImageId: !Ref AmiId
@@ -400,6 +419,7 @@ Resources:
 
   # VPC2
   Vpc2:
+    Condition: hasVpn2
     Type: AWS::EC2::VPC
     Properties:
       CidrBlock: !Ref Vpc2CidrBlock
@@ -411,6 +431,7 @@ Resources:
           Value: !Sub "${AWS::StackName}-Vpc2"
 
   Vpc2Subnet1:
+    Condition: hasVpn2
     Type: AWS::EC2::Subnet
     Properties:
       CidrBlock: !Ref Vpc2Subnet1CidrBlock
@@ -423,6 +444,7 @@ Resources:
           Value: !Sub "${AWS::StackName}-Vpc2-Subnet1"
 
   Vpc2Subnet1RouteTable:
+    Condition: hasVpn2
     Type: AWS::EC2::RouteTable
     Properties:
       VpcId: !Ref Vpc2
@@ -431,12 +453,14 @@ Resources:
           Value: !Sub "${AWS::StackName}-Vpc2-Subnet1"
 
   Vpc2Subnet1RouteTableAssociation:
+    Condition: hasVpn2
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       RouteTableId: !Ref Vpc2Subnet1RouteTable
       SubnetId: !Ref Vpc2Subnet1
 
   Vpc2Subnet1EC2Instance:
+    Condition: hasVpn2
     Type: AWS::EC2::Instance
     Properties:
       ImageId: !Ref AmiId
@@ -451,6 +475,7 @@ Resources:
           Value: !Sub "${AWS::StackName}-Vpc2-Subnet1-Instance1"
 
   Vpc2SecurityGroupForEc2:
+    Condition: hasVpn2
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupName: !Sub "${AWS::StackName}-Vpc2-ForInstance"
@@ -465,6 +490,7 @@ Resources:
           Value: !Sub "${AWS::StackName}-Vpc2-ForInstance"
 
   Vpc2SecurityGroupForEndPoint:
+    Condition: hasVpn2
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupName: !Sub "${AWS::StackName}-Vpc2-ForEndPoint"
@@ -479,6 +505,7 @@ Resources:
           Value: !Sub "${AWS::StackName}-Vpc2-ForEndPoint"
 
   Vpc2SecurityGroupIngressForEndPoint:
+    Condition: hasVpn2
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
       GroupId: !GetAtt Vpc2SecurityGroupForEndPoint.GroupId
@@ -489,6 +516,7 @@ Resources:
       ToPort: 443
 
   Vpc2EndPointForSsm:
+    Condition: hasVpn2
     Type: AWS::EC2::VPCEndpoint
     Properties:
       ServiceName: !Sub "com.amazonaws.${AWS::Region}.ssm"
@@ -501,6 +529,7 @@ Resources:
       VpcId: !Ref Vpc2
 
   Vpc2EndPointForSsmMessages:
+    Condition: hasVpn2
     Type: AWS::EC2::VPCEndpoint
     Properties:
       ServiceName: !Sub "com.amazonaws.${AWS::Region}.ssmmessages"
@@ -513,6 +542,7 @@ Resources:
       VpcId: !Ref Vpc2
 
   Vpc2EndPointForEc2Messages:
+    Condition: hasVpn2
     Type: AWS::EC2::VPCEndpoint
     Properties:
       ServiceName: !Sub "com.amazonaws.${AWS::Region}.ec2messages"
@@ -525,6 +555,7 @@ Resources:
       VpcId: !Ref Vpc2
 
   Vpc2EndPointForS3:
+    Condition: hasVpn2
     Type: AWS::EC2::VPCEndpoint
     Properties:
       ServiceName: !Sub "com.amazonaws.${AWS::Region}.s3"
@@ -534,6 +565,7 @@ Resources:
       VpcId: !Ref Vpc2
 
   Vpc2VPNGateway:
+    Condition: hasVpn2
     Type: AWS::EC2::VPNGateway
     Properties:
       Type: ipsec.1
@@ -542,12 +574,14 @@ Resources:
           Value: !Sub "${AWS::StackName}-Vpc2-VirtualPrivateGateway"
 
   Vpn2VPCGatewayAttachment:
+    Condition: hasVpn2
     Type: AWS::EC2::VPCGatewayAttachment
     Properties:
       VpcId: !Ref Vpc2
       VpnGatewayId: !Ref Vpc2VPNGateway
 
   Vpc2VPNGatewayRoutePropagation:
+    Condition: hasVpn2
     Type: AWS::EC2::VPNGatewayRoutePropagation
     Properties:
       RouteTableIds:
@@ -556,6 +590,7 @@ Resources:
     DependsOn: Vpn2VPCGatewayAttachment
 
   Vpc2SecurityGroupIngressFromVpc1NatGateway:
+    Condition: hasVpn2
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
       GroupId: !GetAtt Vpc2SecurityGroupForEc2.GroupId
@@ -566,6 +601,7 @@ Resources:
       ToPort: 22
 
   Vpc2SecurityGroupIngressFromVpc1Instance:
+    Condition: hasVpn2
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
       GroupId: !GetAtt Vpc2SecurityGroupForEc2.GroupId

@@ -91,7 +91,6 @@ Resources:
   # IAM Role for EC2 Instance
   ##############################################################################
   RoleForInstance:
-    Condition: hasEc2
     Type: AWS::IAM::Role
     Properties:
       RoleName: !Sub "${AWS::StackName}-ForInstance"
@@ -108,7 +107,6 @@ Resources:
         - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
 
   PolicyForInstance:
-    Condition: hasEc2
     Type: AWS::IAM::ManagedPolicy
     Properties:
       ManagedPolicyName: !Sub "${AWS::StackName}-ForInstance"
@@ -126,7 +124,6 @@ Resources:
         - !Ref RoleForInstance
 
   InstanceProfile:
-    Condition: hasEc2
     Type: AWS::IAM::InstanceProfile
     Properties:
       InstanceProfileName: !Sub "${AWS::StackName}-Instance"
